@@ -8,6 +8,7 @@ import shutil
 
 scriptDatas=[]
 scriptLabels=[]
+useIds=[]
 
 currentId=0
 
@@ -55,6 +56,10 @@ def msgEndFunc(fileName,data,args):
         "cmd":"msg",
         "args":data or {}
     }
+
+    if not data or not "sel" in data:
+        targetData["nextId"]=currentId+1
+
     scriptDatas.append(targetData)
 
 def labelFunc(fileName,data,args):
@@ -72,11 +77,13 @@ def gotoFunc(fileName,data,args):
             "label":"%s_%s" % (fileName,args)
         }
     }
+
     scriptDatas.append(targetData)
 
 def waitFunc(fileName,data,args):
     targetData={
         "id":currentId,
+        "nextId":currentId+1,
         "cmd":"wait",
         "args":{
             "time":float(args)
@@ -134,6 +141,10 @@ def loadFile(filePath):
             if cmd == "":
                 continue
 
+            if currentId in useIds:
+                print("repeat story id:%d,stop!"%currentId)
+                return False
+
             if flag == 0:
                 if cmd != "@start":
                     print("invalid "+filePath+",break")
@@ -152,6 +163,7 @@ def loadFile(filePath):
                 
                 data=cmds[cmd](fileName,data,args)
                 if not data:
+                    useIds.append(currentId)
                     currentId=currentId+1
                     curCmd=""
             else:

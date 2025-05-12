@@ -14,6 +14,24 @@ currentId=0
 
 #msg命令
 def msgFunc(fileName,data,args):
+    targetData={
+        "id":currentId,
+        "cmd":"msg",
+        "args":{}
+    }
+
+    index=args.find(":")
+    if index == -1:
+        targetData["args"]["text"]=args
+    else:
+        targetData["args"]["name"]=args[0:index]
+        targetData["args"]["text"]=args[index:]
+
+    targetData["nextId"]=currentId+1
+
+    scriptDatas.append(targetData)
+
+def msgStartFunc(fileName,data,args):
     data={
         "text":""
     }
@@ -92,8 +110,10 @@ def waitFunc(fileName,data,args):
     scriptDatas.append(targetData)
 
 cmds={
+    #控制类
     #msg命令
     "@msg":msgFunc,
+    "@msg-start":msgStartFunc,
     "@msg-text":msgTextFunc,
     "@msg-name":msgNameFunc,
     "@msg-actor":msgActorFunc,
@@ -111,7 +131,7 @@ cmds={
 }
 
 endCmd={
-    "@msg":msgEndFunc,
+    "@msg-start":msgEndFunc,
 }
 
 def loadFile(filePath):

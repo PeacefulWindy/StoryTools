@@ -1,9 +1,6 @@
 import os
 import openpyxl
 import json
-from slpp import slpp as lua
-import xml.etree.ElementTree as ET
-import time
 import shutil
 
 scriptDatas=[]
@@ -18,7 +15,16 @@ def msgFunc(fileName,cmdData,cmdArgs):
     targetData={
         "id":currentId,
         "cmd":"msg",
-        "args":{}
+        "nextId":currentId+1,
+        "args":
+        {
+            "name":"",
+            "text":"",
+            "actor":0,
+            "sel":{},
+            "break":False,
+            "click":True,
+        }
     }
 
     index=cmdArgs.find(":")
@@ -28,13 +34,16 @@ def msgFunc(fileName,cmdData,cmdArgs):
         targetData["args"]["name"]=cmdArgs[0:index]
         targetData["args"]["text"]=cmdArgs[index:]
 
-    targetData["nextId"]=currentId+1
-
     scriptDatas.append(targetData)
 
 def msgStartFunc(fileName,cmdData,cmdArgs):
     data={
-        "text":""
+        "name":"",
+        "text":"",
+        "actor":0,
+        "sel":{},
+        "break":False,
+        "click":True,
     }
     return data
 
@@ -73,7 +82,12 @@ def msgBreakFunc(fileName,cmdData,cmdArgs):
 def msgTextFunc(fileName,cmdData,cmdArgs):
     cmdData["text"]=cmdArgs
     return cmdData
-    
+
+def msgClickFunc(fileName,cmdData,cmdArgs):
+    cmdData["click"]=False
+
+    return cmdData
+
 def msgEndFunc(fileName,cmdData,cmdArgs):
     targetData={
         "id":currentId,
@@ -186,7 +200,7 @@ def audioSrcFunc(fileName,cmdData,cmdArgs):
     return cmdData
 
 def audioVolumeFunc(fileName,cmdData,cmdArgs):
-    cmdData["volume"]=int(cmdArgs)
+    cmdData["vol"]=int(cmdArgs)
     return cmdData
 
 def audioLoopFunc(fileName,cmdData,cmdArgs):
@@ -204,6 +218,19 @@ def audioEndFunc(fileName,cmdData,cmdArgs):
         "nextId":currentId+1,
         "cmd":"audio",
         "args":cmdData or {}
+    }
+
+    scriptDatas.append(targetData)
+
+def audioStopFunc(fileName,cmdData,cmdArgs):
+    targetData={
+        "id":currentId,
+        "nextId":currentId+1,
+        "cmd":"audio-stop",
+        "args":
+        {
+            "channel":int(cmdArgs),
+        }
     }
 
     scriptDatas.append(targetData)
@@ -259,6 +286,21 @@ def voFunc(fileName,cmdData,cmdArgs):
 
     scriptDatas.append(targetData)
 
+def videoFunc(fileName,cmdData,cmdArgs):
+    targetData={
+        "id":currentId,
+        "nextId":currentId+1,
+        "cmd":"video",
+        "args":
+        {
+            "id":0,
+            "src":cmdArgs[0],
+            "full":True,
+        }
+    }
+
+    scriptDatas.append(targetData)
+
 cmds={
     #显示类
     #msg命令
@@ -269,6 +311,7 @@ cmds={
     "@msg-actor":msgActorFunc,
     "@msg-sel":msgSelFunc,
     "@msg-break":msgBreakFunc,
+    "@msg-click":msgClickFunc,
     "@msg-end":msgEndFunc,
 
     #控制类
@@ -289,10 +332,11 @@ cmds={
     "@audio":audioFunc,
     "@audio-start":audioStartFunc,
     "@audio-id":audioIdFunc,
-    "@audio-volume":audioVolumeFunc,
+    "@audio-vol":audioVolumeFunc,
     "@audio-src":audioSrcFunc,
     "@audio-loop":audioLoopFunc,
     "@audio-end":audioEndFunc,
+    "@audio-stop":audioStopFunc,
 
     #bgm命令
     "@bgm":bgmFunc,
@@ -302,6 +346,9 @@ cmds={
 
     #vo命令
     "@vo":voFunc,
+
+    #video命令
+    "@video":videoFunc,
 }
 
 endCmd={

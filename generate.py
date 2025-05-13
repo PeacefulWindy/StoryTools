@@ -12,41 +12,42 @@ useIds=[]
 
 currentId=0
 
-#msg命令
-def msgFunc(fileName,data,args):
+#显示类
+#对话命令
+def msgFunc(fileName,cmdData,cmdArgs):
     targetData={
         "id":currentId,
         "cmd":"msg",
         "args":{}
     }
 
-    index=args.find(":")
+    index=cmdArgs.find(":")
     if index == -1:
-        targetData["args"]["text"]=args
+        targetData["args"]["text"]=cmdArgs
     else:
-        targetData["args"]["name"]=args[0:index]
-        targetData["args"]["text"]=args[index:]
+        targetData["args"]["name"]=cmdArgs[0:index]
+        targetData["args"]["text"]=cmdArgs[index:]
 
     targetData["nextId"]=currentId+1
 
     scriptDatas.append(targetData)
 
-def msgStartFunc(fileName,data,args):
+def msgStartFunc(fileName,cmdData,cmdArgs):
     data={
         "text":""
     }
     return data
 
-def msgNameFunc(fileName,data,args):
-    data["name"]=args
-    return data
+def msgNameFunc(fileName,cmdData,cmdArgs):
+    cmdData["name"]=cmdArgs
+    return cmdData
 
-def msgActorFunc(fileName,data,args):
-    data["actor"]=int(args)
-    return data
+def msgActorFunc(fileName,cmdData,cmdArgs):
+    cmdData["actor"]=int(cmdArgs)
+    return cmdData
 
-def msgSelFunc(fileName,data,args):
-    selDatas=args.split(",")
+def msgSelFunc(fileName,cmdData,cmdArgs):
+    selDatas=cmdArgs.split(",")
 
     selects=[]
     for it in selDatas:
@@ -60,57 +61,206 @@ def msgSelFunc(fileName,data,args):
             "label":"%s_%s" % (fileName,it[index+1:]),
         })
     
-    data["sel"]=selects
+    cmdData["sel"]=selects
 
-    return data
+    return cmdData
 
-def msgTextFunc(fileName,data,args):
-    data["text"]=args
-    return data
+def msgBreakFunc(fileName,cmdData,cmdArgs):
+    cmdData["break"]=True
+
+    return cmdData
+
+def msgTextFunc(fileName,cmdData,cmdArgs):
+    cmdData["text"]=cmdArgs
+    return cmdData
     
-def msgEndFunc(fileName,data,args):
+def msgEndFunc(fileName,cmdData,cmdArgs):
     targetData={
         "id":currentId,
         "cmd":"msg",
-        "args":data or {}
+        "args":cmdData or {}
     }
 
-    if not data or not "sel" in data:
+    if not cmdData or not "sel" in cmdData:
         targetData["nextId"]=currentId+1
 
     scriptDatas.append(targetData)
 
-def labelFunc(fileName,data,args):
-    targetData={
-        "id":"%s_%s" % (fileName,args),
-        "nextId":currentId+1
-    }
-    scriptLabels.append(targetData)
-
-def gotoFunc(fileName,data,args):
-    targetData={
-        "id":currentId,
-        "cmd":"goto",
-        "args":{
-            "label":"%s_%s" % (fileName,args)
-        }
-    }
-
-    scriptDatas.append(targetData)
-
-def waitFunc(fileName,data,args):
+#控制类
+#guide命令
+def guideFunc(fileName,cmdData,cmdArgs):
     targetData={
         "id":currentId,
         "nextId":currentId+1,
         "cmd":"wait",
         "args":{
-            "time":float(args)
+            "id":int(cmdArgs)
+        }
+    }
+
+    scriptDatas.append(targetData)
+
+#标签命令
+def labelFunc(fileName,cmdData,cmdArgs):
+    targetData={
+        "id":"%s_%s" % (fileName,cmdArgs),
+        "nextId":currentId+1
+    }
+    scriptLabels.append(targetData)
+
+#跳转命令
+def gotoFunc(fileName,cmdData,cmdArgs):
+    targetData={
+        "id":currentId,
+        "cmd":"goto",
+        "args":{
+            "label":"%s_%s" % (fileName,cmdArgs)
+        }
+    }
+
+    scriptDatas.append(targetData)
+
+#等待命令
+def waitFunc(fileName,cmdData,cmdArgs):
+    targetData={
+        "id":currentId,
+        "nextId":currentId+1,
+        "cmd":"wait",
+        "args":{
+            "time":float(cmdArgs)
         }
     }
     scriptDatas.append(targetData)
 
+#音频类
+#audio命令
+def audioFunc(fileName,cmdData,cmdArgs):
+    targetData={
+        "id":currentId,
+        "nextId":currentId+1,
+        "cmd":"audio",
+        "args":
+        {
+            "channel":0,
+            "id":0,
+            "src":"",
+            "volume":100,
+            "loop":False,
+        }
+    }
+
+    args=cmdArgs.split(",")
+    targetData["args"]["channel"]=int(args[0])
+    targetData["args"]["src"]=args[1]
+
+    if len(args) > 1:
+        isLoop=int(args[2])
+        if isLoop == 1:
+            targetData["args"]["loop"]=True
+        else:
+            targetData["args"]["loop"]=False
+
+
+    scriptDatas.append(targetData)
+
+def audioStartFunc(fileName,cmdData,cmdArgs):
+    data={
+        "channel":0,
+        "id":0,
+        "src":"",
+        "volume":100,
+        "loop":False,
+    }
+    return data
+
+def audioChannelFunc(fileName,cmdData,cmdArgs):
+    cmdData["channel"]=int(cmdArgs)
+    return cmdData
+
+def audioIdFunc(fileName,cmdData,cmdArgs):
+    cmdData["id"]=int(cmdArgs)
+    return cmdData
+
+def audioSrcFunc(fileName,cmdData,cmdArgs):
+    cmdData["src"]=cmdArgs
+    return cmdData
+
+def audioVolumeFunc(fileName,cmdData,cmdArgs):
+    cmdData["volume"]=int(cmdArgs)
+    return cmdData
+
+def audioLoopFunc(fileName,cmdData,cmdArgs):
+    isLoop=int(cmdArgs)
+    if isLoop == 1:
+        cmdData["loop"]=True
+    else:
+        cmdData["loop"]=False
+    
+    return cmdData
+
+def audioEndFunc(fileName,cmdData,cmdArgs):
+    targetData={
+        "id":currentId,
+        "nextId":currentId+1,
+        "cmd":"audio",
+        "args":cmdData or {}
+    }
+
+    scriptDatas.append(targetData)
+
+def bgmFunc(fileName,cmdData,cmdArgs):
+    targetData={
+        "id":currentId,
+        "nextId":currentId+1,
+        "cmd":"audio",
+        "args":
+        {
+            "channel":1,
+            "id":0,
+            "src":cmdArgs[0],
+            "volume":100,
+            "loop":True,
+        }
+    }
+
+    scriptDatas.append(targetData)
+
+def seFunc(fileName,cmdData,cmdArgs):
+    targetData={
+        "id":currentId,
+        "nextId":currentId+1,
+        "cmd":"audio",
+        "args":
+        {
+            "channel":2,
+            "id":0,
+            "src":cmdArgs[0],
+            "volume":100,
+            "loop":False,
+        }
+    }
+
+    scriptDatas.append(targetData)
+
+def voFunc(fileName,cmdData,cmdArgs):
+    targetData={
+        "id":currentId,
+        "nextId":currentId+1,
+        "cmd":"audio",
+        "args":
+        {
+            "channel":3,
+            "id":0,
+            "src":cmdArgs[0],
+            "volume":100,
+            "loop":False,
+        }
+    }
+
+    scriptDatas.append(targetData)
+
 cmds={
-    #控制类
+    #显示类
     #msg命令
     "@msg":msgFunc,
     "@msg-start":msgStartFunc,
@@ -118,8 +268,10 @@ cmds={
     "@msg-name":msgNameFunc,
     "@msg-actor":msgActorFunc,
     "@msg-sel":msgSelFunc,
+    "@msg-break":msgBreakFunc,
     "@msg-end":msgEndFunc,
 
+    #控制类
     #label命令
     "@label":labelFunc,
 
@@ -128,10 +280,33 @@ cmds={
 
     #wait命令
     "@wait":waitFunc,
+
+    #guide命令
+    "@guide":guideFunc,
+
+    #音频类
+    #audio命令
+    "@audio":audioFunc,
+    "@audio-start":audioStartFunc,
+    "@audio-id":audioIdFunc,
+    "@audio-volume":audioVolumeFunc,
+    "@audio-src":audioSrcFunc,
+    "@audio-loop":audioLoopFunc,
+    "@audio-end":audioEndFunc,
+
+    #bgm命令
+    "@bgm":bgmFunc,
+
+    #se命令
+    "@se":seFunc,
+
+    #vo命令
+    "@vo":voFunc,
 }
 
 endCmd={
     "@msg-start":msgEndFunc,
+    "@audio-start":audioEndFunc,
 }
 
 def loadFile(filePath):

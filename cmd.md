@@ -101,7 +101,7 @@
 
 例子:
 
-@audio-loop 1
+@msg-click 1
 
 ---
 

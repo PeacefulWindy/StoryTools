@@ -1,21 +1,39 @@
 import os
+import sys
 import openpyxl
 import json
+import time
 import shutil
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+import colorama
+import re
 
-scriptDatas=[]
-scriptLabels=[]
+storyDatas=[]
+storyLabels=[]
 useIds=[]
+curId=0
 
-currentId=0
+cmdPatterns={
+    "msg":re.compile(r'^([\w]+)\:([\w\W]+)'),
+    "guide":re.compile(r'^([\d]+)'),
+    "wait":re.compile(r'^([\d\.]+)'),
+    "audio":re.compile(r'^([\d]+)\,([\w\W]+)'),
+    "audio-stop":re.compile(r'^([\d]+)'),
+    "bgm":re.compile(r'^([\d]+)'),
+    "se":re.compile(r'^([\d]+)'),
+    "vo":re.compile(r'^([\d]+)'),
+}
 
 #显示类
 #对话命令
-def msgFunc(fileName,cmdData,cmdArgs):
+def msgFunc(fileName,cmdArgs,cmdData):
+    global curId
+
     targetData={
-        "id":currentId,
+        "id":curId,
         "cmd":"msg",
-        "nextId":currentId+1,
+        "nextId":curId+1,
         "args":
         {
             "name":"",
@@ -27,16 +45,20 @@ def msgFunc(fileName,cmdData,cmdArgs):
         }
     }
 
-    index=cmdArgs.find(":")
-    if index == -1:
+    pattern=cmdPatterns["msg"]
+    res=pattern.match(cmdArgs)
+    if not res:
         targetData["args"]["text"]=cmdArgs
     else:
-        targetData["args"]["name"]=cmdArgs[0:index]
-        targetData["args"]["text"]=cmdArgs[index:]
+        datas=res.groups()
+        targetData["args"]["name"]=datas[0]
+        targetData["args"]["text"]=datas[1]
 
-    scriptDatas.append(targetData)
+    curId=curId+1
+    storyDatas.append(targetData)
+    return True
 
-def msgStartFunc(fileName,cmdData,cmdArgs):
+def msgStartFunc(fileName,cmdArgs,cmdData):
     data={
         "name":"",
         "text":"",
@@ -47,15 +69,20 @@ def msgStartFunc(fileName,cmdData,cmdArgs):
     }
     return data
 
-def msgNameFunc(fileName,cmdData,cmdArgs):
+def msgNameFunc(fileName,cmdArgs,cmdData):
     cmdData["name"]=cmdArgs
     return cmdData
 
-def msgActorFunc(fileName,cmdData,cmdArgs):
-    cmdData["actor"]=int(cmdArgs)
+def msgActorFunc(fileName,cmdArgs,cmdData):
+    try:
+        cmdData["actor"]=int(cmdArgs)
+    except Exception as e:
+        print("%sinvalid actor args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+    
     return cmdData
 
-def msgSelFunc(fileName,cmdData,cmdArgs):
+def msgSelFunc(fileName,cmdArgs,cmdData):
     selDatas=cmdArgs.split(",")
 
     selects=[]
@@ -74,137 +101,203 @@ def msgSelFunc(fileName,cmdData,cmdArgs):
 
     return cmdData
 
-def msgBreakFunc(fileName,cmdData,cmdArgs):
+def msgBreakFunc(fileName,cmdArgs,cmdData):
     cmdData["break"]=True
 
     return cmdData
 
-def msgTextFunc(fileName,cmdData,cmdArgs):
+def msgTextFunc(fileName,cmdArgs,cmdData):
     cmdData["text"]=cmdArgs
     return cmdData
 
-def msgClickFunc(fileName,cmdData,cmdArgs):
+def msgClickFunc(fileName,cmdArgs,cmdData):
     cmdData["click"]=False
 
     return cmdData
 
-def msgEndFunc(fileName,cmdData,cmdArgs):
+def msgEndFunc(fileName,cmdArgs,cmdData):
+    global curId
+
+    if not cmdData:
+        print("%sinvalid @msg-end data:%s" % (colorama.Fore.RED,cmdData))
+        return
+    
     targetData={
-        "id":currentId,
+        "id":curId,
         "cmd":"msg",
-        "args":cmdData or {}
+        "args":cmdData
     }
 
     if not cmdData or not "sel" in cmdData:
-        targetData["nextId"]=currentId+1
+        targetData["nextId"]=curId+1
 
-    scriptDatas.append(targetData)
+    curId=curId+1
+    storyDatas.append(targetData)
+    return True
 
 #控制类
 #guide命令
-def guideFunc(fileName,cmdData,cmdArgs):
+def guideFunc(fileName,cmdArgs,cmdData):
+    global curId
+
+    pattern=cmdPatterns["guide"]
+    res=pattern.match(cmdArgs)
+    if not res:
+        print("%sInvalid guide args:%s",colorama.Fore.RED,cmdArgs)
+        return
+    
     targetData={
-        "id":currentId,
-        "nextId":currentId+1,
-        "cmd":"wait",
+        "id":curId,
+        "nextId":curId+1,
+        "cmd":"guide",
         "args":{
-            "id":int(cmdArgs)
+            "id":0
         }
     }
 
-    scriptDatas.append(targetData)
+    datas=res.groups()
+    targetData["args"]["id"]=int(datas[0])
+
+    curId=curId+1
+    storyDatas.append(targetData)
+    return True
 
 #标签命令
-def labelFunc(fileName,cmdData,cmdArgs):
+def labelFunc(fileName,cmdArgs,cmdData):
+    global curId
+    
     targetData={
         "id":"%s_%s" % (fileName,cmdArgs),
-        "nextId":currentId+1
+        "nextId":curId+1
     }
-    scriptLabels.append(targetData)
+    
+    curId=curId+1
+    storyLabels.append(targetData)
+    return True
 
 #跳转命令
-def gotoFunc(fileName,cmdData,cmdArgs):
+def gotoFunc(fileName,cmdArgs,cmdData):
+    global curId
+
     targetData={
-        "id":currentId,
+        "id":curId,
         "cmd":"goto",
         "args":{
             "label":"%s_%s" % (fileName,cmdArgs)
         }
     }
 
-    scriptDatas.append(targetData)
+    curId=curId+1
+    storyDatas.append(targetData)
+    return True
 
 #等待命令
-def waitFunc(fileName,cmdData,cmdArgs):
+def waitFunc(fileName,cmdArgs,cmdData):
+    global curId
+
+    pattern=cmdPatterns["wait"]
+    res=pattern.match(cmdArgs)
+    if not res:
+        print("%sInvalid guide args:%s",colorama.Fore.RED,cmdArgs)
+        return
+    
     targetData={
-        "id":currentId,
-        "nextId":currentId+1,
+        "id":curId,
+        "nextId":curId+1,
         "cmd":"wait",
         "args":{
-            "time":float(cmdArgs)
+            "time":0
         }
     }
-    scriptDatas.append(targetData)
+    
+    datas=res.groups()
+    targetData["args"]["time"]=float(datas[0])
+
+    curId=curId+1
+    storyDatas.append(targetData)
+    return True
 
 #音频类
 #audio命令
-def audioFunc(fileName,cmdData,cmdArgs):
+def audioFunc(fileName,cmdArgs,cmdData):
+    global curId
+
+    pattern=cmdPatterns["audio"]
+    res=pattern.match(cmdArgs)
+    if not res:
+        return
+
     targetData={
-        "id":currentId,
-        "nextId":currentId+1,
+        "id":curId,
+        "nextId":curId+1,
         "cmd":"audio",
         "args":
         {
-            "channel":0,
+            "ch":0,
             "id":0,
             "src":"",
-            "volume":100,
+            "vol":100,
             "loop":False,
         }
     }
+    
+    datas=res.groups()
+    targetData["args"]["ch"]=int(datas[0])
+    targetData["args"]["src"]=datas[1]
 
-    args=cmdArgs.split(",")
-    targetData["args"]["channel"]=int(args[0])
-    targetData["args"]["src"]=args[1]
+    curId=curId+1
+    storyDatas.append(targetData)
+    return True
 
-    if len(args) > 1:
-        isLoop=int(args[2])
-        if isLoop == 1:
-            targetData["args"]["loop"]=True
-        else:
-            targetData["args"]["loop"]=False
-
-
-    scriptDatas.append(targetData)
-
-def audioStartFunc(fileName,cmdData,cmdArgs):
+def audioStartFunc(fileName,cmdArgs,cmdData):
     data={
-        "channel":0,
+        "ch":0,
         "id":0,
         "src":"",
-        "volume":100,
+        "vol":100,
         "loop":False,
     }
     return data
 
-def audioChannelFunc(fileName,cmdData,cmdArgs):
-    cmdData["channel"]=int(cmdArgs)
+def audioChannelFunc(fileName,cmdArgs,cmdData):
+    try:
+        cmdData["ch"]=int(cmdArgs)
+    except Exception as e:
+        print("%sinvalid @audio-ch args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+    
     return cmdData
 
-def audioIdFunc(fileName,cmdData,cmdArgs):
-    cmdData["id"]=int(cmdArgs)
+def audioIdFunc(fileName,cmdArgs,cmdData):
+    try:
+        cmdData["id"]=int(cmdArgs)
+    except Exception as e:
+        print("%sinvalid @audio-id args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+    
     return cmdData
 
-def audioSrcFunc(fileName,cmdData,cmdArgs):
+def audioSrcFunc(fileName,cmdArgs,cmdData):
     cmdData["src"]=cmdArgs
     return cmdData
 
-def audioVolumeFunc(fileName,cmdData,cmdArgs):
-    cmdData["vol"]=int(cmdArgs)
+def audioVolumeFunc(fileName,cmdArgs,cmdData):
+    try:
+        cmdData["vol"]=int(cmdArgs)
+    except Exception as e:
+        print("%sinvalid @audio-vol args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+    
     return cmdData
 
-def audioLoopFunc(fileName,cmdData,cmdArgs):
-    isLoop=int(cmdArgs)
+def audioLoopFunc(fileName,cmdArgs,cmdData):
+    isLoop=0
+    try:
+        isLoop=int(cmdArgs)
+    except Exception as e:
+        print("%sinvalid @audio-loop args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+
     if isLoop == 1:
         cmdData["loop"]=True
     else:
@@ -212,94 +305,163 @@ def audioLoopFunc(fileName,cmdData,cmdArgs):
     
     return cmdData
 
-def audioEndFunc(fileName,cmdData,cmdArgs):
+def audioEndFunc(fileName,cmdArgs,cmdData):
+    global curId
+
+    if not cmdData:
+        print("%sinvalid @audio-end data:%s" % (colorama.Fore.RED,cmdData))
+        return
+
     targetData={
-        "id":currentId,
-        "nextId":currentId+1,
+        "id":curId,
+        "nextId":curId+1,
         "cmd":"audio",
-        "args":cmdData or {}
+        "args":cmdData
     }
 
-    scriptDatas.append(targetData)
+    curId=curId+1
+    storyDatas.append(targetData)
+    return True
 
-def audioStopFunc(fileName,cmdData,cmdArgs):
+def audioStopFunc(fileName,cmdArgs,cmdData):
+    global curId
+
+    pattern=cmdPatterns["audio-stop"]
+    res=pattern.match(cmdArgs)
+    if not res:
+        print("%sInvalid guide args:%s",colorama.Fore.RED,cmdArgs)
+        return
+    
     targetData={
-        "id":currentId,
-        "nextId":currentId+1,
+        "id":curId,
+        "nextId":curId+1,
         "cmd":"audio-stop",
-        "args":
-        {
-            "channel":int(cmdArgs),
+        "args":{
+            "id":0
         }
     }
+    
+    datas=res.groups()
+    targetData["args"]["id"]=int(datas[0])
 
-    scriptDatas.append(targetData)
+    curId=curId+1
+    storyDatas.append(targetData)
+    return True
 
-def bgmFunc(fileName,cmdData,cmdArgs):
+def bgmFunc(fileName,cmdArgs,cmdData):
+    global curId
+
+    id=0
+    src=""
+    pattern=cmdPatterns["bgm"]
+    res=pattern.match(cmdArgs)
+    
+    if res:
+        datas=res.groups()
+        id=int(datas[0])
+    else:
+        src=cmdArgs
+    
     targetData={
-        "id":currentId,
-        "nextId":currentId+1,
+        "id":curId,
+        "nextId":curId+1,
         "cmd":"audio",
         "args":
         {
-            "channel":1,
-            "id":0,
-            "src":cmdArgs[0],
-            "volume":100,
+            "ch":1,
+            "id":id,
+            "src":src,
+            "vol":100,
             "loop":True,
         }
     }
 
-    scriptDatas.append(targetData)
+    curId=curId+1
+    storyDatas.append(targetData)
+    return True
 
-def seFunc(fileName,cmdData,cmdArgs):
+def seFunc(fileName,cmdArgs,cmdData):
+    global curId
+
+    id=0
+    src=""
+    pattern=cmdPatterns["se"]
+    res=pattern.match(cmdArgs)
+    
+    if res:
+        datas=res.groups()
+        id=int(datas[0])
+    else:
+        src=cmdArgs
+    
     targetData={
-        "id":currentId,
-        "nextId":currentId+1,
+        "id":curId,
+        "nextId":curId+1,
         "cmd":"audio",
         "args":
         {
-            "channel":2,
-            "id":0,
-            "src":cmdArgs[0],
-            "volume":100,
-            "loop":False,
+            "ch":1,
+            "id":id,
+            "src":src,
+            "vol":100,
+            "loop":True,
         }
     }
 
-    scriptDatas.append(targetData)
+    curId=curId+1
+    storyDatas.append(targetData)
+    return True
 
-def voFunc(fileName,cmdData,cmdArgs):
+def voFunc(fileName,cmdArgs,cmdData):
+    global curId
+
+    id=0
+    src=""
+    pattern=cmdPatterns["vo"]
+    res=pattern.match(cmdArgs)
+    
+    if res:
+        datas=res.groups()
+        id=int(datas[0])
+    else:
+        src=cmdArgs
+    
     targetData={
-        "id":currentId,
-        "nextId":currentId+1,
+        "id":curId,
+        "nextId":curId+1,
         "cmd":"audio",
         "args":
         {
-            "channel":3,
-            "id":0,
-            "src":cmdArgs[0],
-            "volume":100,
-            "loop":False,
+            "ch":1,
+            "id":id,
+            "src":src,
+            "vol":100,
+            "loop":True,
         }
     }
 
-    scriptDatas.append(targetData)
+    curId=curId+1
+    storyDatas.append(targetData)
+    return True
 
-def videoFunc(fileName,cmdData,cmdArgs):
+def videoFunc(fileName,cmdArgs,cmdData):
+    global curId
+
     targetData={
-        "id":currentId,
-        "nextId":currentId+1,
+        "id":curId,
+        "nextId":curId+1,
         "cmd":"video",
         "args":
         {
             "id":0,
-            "src":cmdArgs[0],
+            "src":cmdArgs,
             "full":True,
         }
     }
 
-    scriptDatas.append(targetData)
+    curId=curId+1
+    storyDatas.append(targetData)
+    return True
 
 cmds={
     #显示类
@@ -332,6 +494,7 @@ cmds={
     "@audio":audioFunc,
     "@audio-start":audioStartFunc,
     "@audio-id":audioIdFunc,
+    "@audio-ch":audioChannelFunc,
     "@audio-vol":audioVolumeFunc,
     "@audio-src":audioSrcFunc,
     "@audio-loop":audioLoopFunc,
@@ -351,28 +514,54 @@ cmds={
     "@video":videoFunc,
 }
 
-endCmd={
-    "@msg-start":msgEndFunc,
-    "@audio-start":audioEndFunc,
+endCmds={
+    "@msg-end":True,
+    "@audio-end":True
 }
 
-def loadFile(filePath):
-    global currentId
+closeCmds={
+   "@msg-start":msgEndFunc,
+   "@audio-start":audioEndFunc,
+}
+
+cmdLinks={
+    "@msg-start":[
+        "@msg-text",
+        "@msg-name",
+        "@msg-actor",
+        "@msg-sel",
+        "@msg-break",
+        "@msg-click",
+    ],
+    "@audio-start":[
+        "@audio-id",
+        "@audio-ch",
+        "@audio-vol",
+        "@audio-src",
+        "@audio-loop",
+    ]
+}
+
+def generateFile(filePath):
+    global curId
 
     fileName=os.path.splitext(os.path.basename(filePath))[0]
 
-    curCmd=""
+    print("--------------------")
+    print("open %s" % (filePath))
+
     data=None
-
+    prevCmd=None
     with open(filePath,encoding="utf-8") as file:
-        datas=file.readlines()
+        fileDatas=file.readlines()
 
-        flag=0
-        for it in datas:
-            it=it.strip()
+        headerCheck=False
+        line=1
 
+        for it in fileDatas:
             cmd=None
             args=None
+            it=it.strip()
             index=it.find(" ")
             if index == -1:
                 cmd=it
@@ -380,56 +569,84 @@ def loadFile(filePath):
                 cmd=it[0:index]
                 args=it[index+1:]
             
-            if cmd == "":
+            if not headerCheck:
+                if cmd != "@start":
+                    print("%sinvalid file:%s\n" % (colorama.Fore.RED,filePath))
+                    return
+                
+                id=0
+                try:
+                    id=int(args)
+                except ValueError as e:
+                    print("%sinvalid @start cmd!" % (args))
+                    return
+
+                if id in useIds:
+                    print("%srepeat @start id:%d" % (args,id))
+                    return
+                
+                curId=id
+                headerCheck=True
                 continue
 
-            if currentId in useIds:
-                print("repeat story id:%d,stop!"%currentId)
-                return False
-
-            if flag == 0:
-                if cmd != "@start":
-                    print("invalid "+filePath+",break")
-                    return False
-                
-                currentId=int(args[0])
-            elif cmd in cmds:
-                if curCmd != "" and not curCmd in cmd:
-                    print("warning:not close cmd %s at line:%d,will auto close it."%(curCmd,flag))
-
-                    data=endCmd[curCmd](fileName,data,None)
-                    curCmd=""
-                    currentId=currentId+1
-                elif cmd in endCmd:
-                    curCmd=cmd
-                
-                data=cmds[cmd](fileName,data,args)
-                if not data:
-                    useIds.append(currentId)
-                    currentId=currentId+1
-                    curCmd=""
-            else:
-                print("warning:unknown cmd:%s" % (cmd))
+            if curId in useIds:
+                print("%srepeat @start id:%d" % (args,id))
+                return
             
-            flag=flag+1
-    
-    if curCmd != "":
-        print("warning:not close cmd %s at line:%d,will auto close it."%(curCmd,flag))
-        endCmd[curCmd](fileName,data,None)
+            if not cmd in cmds:
+                print("%sunknown cmd:%s,ignore" % (colorama.Fore.YELLOW,cmd))
+                continue
+
+            if prevCmd and not cmd in cmdLinks[prevCmd]:
+                print("%scmd %s not close,will auto close it!" % (colorama.Fore.YELLOW,prevCmd))
+                cmdFunc=closeCmds[prevCmd]
+                ret=cmdFunc(fileName,args,data)
+                if not ret:
+                    return
+                
+                prevCmd=None
+            elif cmd in cmdLinks:
+                prevCmd=cmd
+            elif cmd in endCmds:
+                prevCmd=None
+
+            cmdFunc=cmds[cmd]
+            ret=cmdFunc(fileName,args,data)
+            if not ret:
+                return
+            
+            if isinstance(ret,dict):
+                data=ret
+
+            line=line+1
+
+    if prevCmd:
+        print("%scmd %s not close,will auto close it!" % (colorama.Fore.YELLOW,prevCmd))
+        cmdFunc=closeCmds[prevCmd]
+        ret=cmdFunc(fileName,args,data)
+        if not ret:
+            return
+
+    print("--------------------")
+    print("")
     
     return True
 
-def move(json_data):
-    outputPath=json_data["output"]
-    movePath=json_data["move"]
-    outputDir=os.path.dirname(movePath)
+def move(configData):
+    inputPath=os.path.abspath(configData["output"])
+    outputPath=os.path.abspath(configData["move"])
+
+    outputDir=os.path.dirname(outputPath)
     if not os.path.exists(outputDir):
         os.makedirs(outputDir)
 
-    print("%s=>%s"%(outputPath,movePath))
-    shutil.copyfile(outputPath,movePath)
+    print("%s=>%s"%(inputPath,outputPath))
+    shutil.copyfile(inputPath,outputPath)
 
 def generateExcel(outputPath):
+    global storyDatas
+    global storyLabels
+
     wb = openpyxl.Workbook()
     sheet=wb.worksheets[0]
     sheet.title="#Story"
@@ -450,11 +667,10 @@ def generateExcel(outputPath):
     sheet["D2"].value="json"
     sheet["D3"].value="参数"
 
-    global scriptDatas
-    scriptDatas=sorted(scriptDatas,key=lambda x:(x["id"]))
+    storyDatas=sorted(storyDatas,key=lambda x:(x["id"]))
     
     index=4
-    for it in scriptDatas:
+    for it in storyDatas:
         sheet["A%d"%index].value=it["id"]
         sheet["C%d"%index].value=it["cmd"]
         if "args" in it:
@@ -479,35 +695,102 @@ def generateExcel(outputPath):
     sheet["B3"].value="下一个对话id"
 
     index=4
-    for it in scriptLabels:
+    for it in storyLabels:
         sheet["A%d"%index].value=it["id"]
         sheet["B%d"%index].value=it["nextId"]
         index=index+1
 
     wb.save(outputPath)
 
-def main():
-    json_data={}
-    with open("../config.json", "r", encoding="utf-8") as file:
-        json_data = json.load(file)
+def main(configData):
+    inputPath=os.path.abspath(configData["input"])
+    outputPath=os.path.abspath(configData["output"])
 
-    outputDir=os.path.dirname(json_data["output"])
+    outputDir=os.path.dirname(outputPath)
     if not os.path.exists(outputDir):
         os.makedirs(outputDir)
+
+    print("inputPath:%s"% (inputPath))
+    print("outputPath:%s"% (outputPath))
+    print()
+
+    print("generate script")
+    print()
     
-    for root, dirs, files in os.walk(json_data["input"]):
+    for root, dirs, files in os.walk(inputPath):
         for file in files:
-            filepath = os.path.join(root, file)
-            print("load file:%s" %filepath)
-            if not loadFile(filepath):
-                print("generate failed!")
+            filePath = os.path.join(root, file)
+            print("load file:%s" % filePath)
+            ret=generateFile(filePath)
+            if not ret:
                 return
-            print("file %s generate ok!\n"%filepath)
     
-    print("will generate story excel...")
-    generateExcel(json_data["output"])
-    print("will move excel...")
-    move(json_data)
+    generateExcel(outputPath)
+
+    if not "move" in configData:
+        return
+    
+    print("will move config...")
+    move(configData)
+    print()
+
+def run(configData):
+    startTime = time.time()
+    main(configData)
+    endTime = time.time()
+    execTime = endTime - startTime
+    print("%stotal time:%.2fs" % (colorama.Fore.GREEN,execTime))
     print("done!")
 
-main()
+configData={}
+class FileMonitor(FileSystemEventHandler):
+    def __init__(self):
+        self.lastModifiedTimes = {}
+    
+    def on_modified(self, event):
+        if not event.is_directory:
+            filePath=event.src_path
+            if not filePath.endswith(".txt"):
+                return
+            
+            curTime=os.path.getmtime(filePath)
+
+            if filePath not in self.lastModifiedTimes or self.lastModifiedTimes[filePath] != curTime:
+                self.lastModifiedTimes[filePath] = curTime
+                os.system('cls' if os.name == 'nt' else 'clear')
+                run(configData)
+
+if __name__ == "__main__":
+    colorama.init(autoreset=True)
+
+    configPath=os.path.abspath(sys.argv[1])
+    if not os.path.exists(configPath):
+        print("%snot found config file:%s" % (colorama.Fore.RED,configPath))
+        exit(-1)
+
+    with open(configPath, "r", encoding="utf-8") as file:
+        configData = json.load(file)
+    
+    inputPath=os.path.abspath(configData["input"])
+    if not os.path.exists(inputPath):
+        print("%sinvalid input path:%s" % (colorama.Fore.RED,inputPath))
+        exit(-1)
+    
+    if len(sys.argv) > 2 and sys.argv[2] == "-once":
+        run(configData)
+    else:
+        fileMonitorHandle=FileMonitor()
+        fileMonitorObserver = Observer()
+        fileMonitorObserver.schedule(fileMonitorHandle, inputPath, recursive=False)
+        fileMonitorObserver.start()
+
+        print("%sauto generate config service start!" % colorama.Fore.GREEN)
+
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            fileMonitorObserver.stop()
+            print("auto generate config service stop!")
+
+        fileMonitorObserver.join()

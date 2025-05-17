@@ -1,2 +1,2 @@
-python -m pip install openpyxl
+python -m pip install openpyxl slpp watchdog colorama
 pause

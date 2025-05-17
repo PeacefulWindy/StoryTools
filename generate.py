@@ -218,7 +218,7 @@ def waitFunc(fileName,cmdArgs,cmdData):
     return True
 
 #音频类
-#audio命令
+#播放音频
 def audioFunc(fileName,cmdArgs,cmdData):
     global curId
 
@@ -323,6 +323,7 @@ def audioEndFunc(fileName,cmdArgs,cmdData):
     storyDatas.append(targetData)
     return True
 
+#关闭音频
 def audioStopFunc(fileName,cmdArgs,cmdData):
     global curId
 

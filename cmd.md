@@ -160,7 +160,7 @@
 
 |参数id|参数名|类型|生成类型|作用|
 |:-:|:-:|:-:|:-:|:-:|
-|1|channel|int|int|通道id|
+|1|ch|int|int|通道id|
 |2|src|string|string|音频路径|设置音频文件路径
 |3|loop|int|bool|是否循环播放，1为循环，0为不循环(默认)|
 
@@ -175,7 +175,7 @@
 
 |可加入的命令|
 |:-:|
-|@audio-channel|
+|@audio-ch|
 |@audio-id|
 |@audio-src|
 |@audio-vol|
@@ -186,16 +186,16 @@
 
 ---
 
-### audio-channel命令
+### audio-ch命令
 说明：设置音频通道
 
 |参数id|参数名|类型|生成类型|作用|
 |:-:|:-:|:-:|:-:|:-:|
-|1|channel|int|int|通道id|
+|1|ch|int|int|通道id|
 
 例子：
 
-@audio-channel 1
+@audio-ch 1
 
 ---
 

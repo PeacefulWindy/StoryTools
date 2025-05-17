@@ -607,7 +607,7 @@ def generateFile(filePath):
                 prevCmd=None
             elif cmd in cmdLinks:
                 prevCmd=cmd
-            elif cmd in endCmds:
+            elif cmd in endCmds or cmd in cmds:
                 prevCmd=None
 
             cmdFunc=cmds[cmd]

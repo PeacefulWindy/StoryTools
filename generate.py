@@ -15,17 +15,52 @@ useIds=[]
 curId=0
 
 cmdPatterns={
-    "msg":re.compile(r'^([\w]+)\:([\w\W]+)'),
-    "guide":re.compile(r'^([\d]+)'),
-    "wait":re.compile(r'^([\d\.]+)'),
-    "audio":re.compile(r'^([\d]+)\,([\w\W]+)'),
-    "audio-stop":re.compile(r'^([\d]+)'),
-    "bgm":re.compile(r'^([\d]+)'),
-    "se":re.compile(r'^([\d]+)'),
-    "vo":re.compile(r'^([\d]+)'),
+    "bg":re.compile(r'^([\d]+)$'),
+    "scene":re.compile(r'^([\d]+)$'),
+    "msg":re.compile(r'^([\d]+)\:(.*)$'),
+    "msgName":re.compile(r'^([^:]*)(.*)$'),
+    "actor-id":re.compile(r'^([\d]+)$'),
+    "actor-type":re.compile(r'^([\d]+)$'),
+    "actor-pos":re.compile(r'^([\d\.]+)\,([\d\.]+)[\,]?([\d\.]*)$'),
+    "actor-rot":re.compile(r'^([\d\.]+)\,([\d\.]+)[\,]?([\d\.]*)$'),
+    "actor-scale":re.compile(r'^([\d\.]+)\,([\d\.]+)[\,]?([\d\.]*)$'),
+    "guide":re.compile(r'^([\d]+)$'),
+    "wait":re.compile(r'^([\d\.]+)$'),
+    "audio":re.compile(r'^([\d]+)\,(.*)$'),
+    "audio-stop":re.compile(r'^([\d]+)$'),
+    "bgm":re.compile(r'^([\d]+)$'),
+    "se":re.compile(r'^([\d]+)$'),
+    "vo":re.compile(r'^([\d]+)$'),
 }
 
 #显示类
+#背景类
+def bgFunc(fileName,cmdArgs,cmdData):
+    global curId
+
+    targetData={
+        "id":curId,
+        "cmd":"bg",
+        "nextId":curId+1,
+        "args":
+        {
+            "id":0,
+            "src":"",
+        }
+    }
+
+    pattern=cmdPatterns["bg"]
+    res=pattern.match(cmdArgs)
+    if res:
+        datas=res.groups()
+        targetData["args"]["id"]=int(datas[0])
+    else:
+        targetData["args"]["src"]=cmdArgs
+
+    curId=curId+1
+    storyDatas.append(targetData)
+    return True
+
 #对话命令
 def msgFunc(fileName,cmdArgs,cmdData):
     global curId
@@ -40,7 +75,7 @@ def msgFunc(fileName,cmdArgs,cmdData):
             "text":"",
             "actor":0,
             "sel":{},
-            "break":False,
+            "async":False,
             "click":True,
         }
     }
@@ -48,7 +83,14 @@ def msgFunc(fileName,cmdArgs,cmdData):
     pattern=cmdPatterns["msg"]
     res=pattern.match(cmdArgs)
     if not res:
-        targetData["args"]["text"]=cmdArgs
+        pattern=cmdPatterns["msgName"]
+        res=pattern.match(cmdArgs)
+        if not res:
+            targetData["args"]["text"]=cmdArgs
+        else:
+            datas=res.groups()
+            targetData["args"]["name"]=datas[0]
+            targetData["args"]["text"]=datas[1]
     else:
         datas=res.groups()
         targetData["args"]["name"]=datas[0]
@@ -64,7 +106,7 @@ def msgStartFunc(fileName,cmdArgs,cmdData):
         "text":"",
         "actor":0,
         "sel":{},
-        "break":False,
+        "async":False,
         "click":True,
     }
     return data
@@ -101,7 +143,7 @@ def msgSelFunc(fileName,cmdArgs,cmdData):
 
     return cmdData
 
-def msgBreakFunc(fileName,cmdArgs,cmdData):
+def msgAsyncFunc(fileName,cmdArgs,cmdData):
     cmdData["break"]=True
 
     return cmdData
@@ -136,27 +178,152 @@ def msgEndFunc(fileName,cmdArgs,cmdData):
     return True
 
 #控制类
-#guide命令
+#角色类
+def actorStartFunc(fileName,cmdArgs,cmdData):
+    data={
+        "id":0,
+        "type":0,
+        "pos":
+        {
+            "x":0,
+            "y":0,
+            "z":0,
+        },
+        "rot":
+        {
+            "x":0,
+            "y":0,
+            "z":0,
+        },
+        "scale":
+        {
+            "x":1,
+            "y":1,
+            "z":1,
+        }
+    }
+    return data
+
+def actorIdFunc(fileName,cmdArgs,cmdData):
+    pattern=cmdPatterns["actor-id"]
+    res=pattern.match(cmdArgs)
+
+    if not res:
+        print("%sinvalid @actor-id args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+
+    datas=res.groups()
+    cmdData["id"]=int(datas[0])
+
+    return cmdData
+
+def actorTypeFunc(fileName,cmdArgs,cmdData):
+    pattern=cmdPatterns["actor-type"]
+    res=pattern.match(cmdArgs)
+
+    if not res:
+        print("%sinvalid @actor-type args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+
+    datas=res.groups()
+    cmdData["type"]=int(datas[0])
+
+    return cmdData
+
+def actorSrcFunc(fileName,cmdArgs,cmdData):
+    cmdData["src"]=cmdArgs
+    
+    return cmdData
+
+def actorPosFunc(fileName,cmdArgs,cmdData):
+    pattern=cmdPatterns["actor-pos"]
+    res=pattern.match(cmdArgs)
+
+    if not res:
+        print("%sinvalid @actor-pos args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+    
+    datas=res.groups()
+    cmdData["pos"]["x"]=float(datas[0])
+    cmdData["pos"]["y"]=float(datas[1])
+    if len(datas[2]) > 0:
+        cmdData["pos"]["z"]=float(datas[2])
+
+    return cmdData
+
+def actorRotateFunc(fileName,cmdArgs,cmdData):
+    pattern=cmdPatterns["actor-rot"]
+    res=pattern.match(cmdArgs)
+
+    if not res:
+        print("%sinvalid @actor-rot args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+    
+    datas=res.groups()
+    cmdData["rot"]["x"]=float(datas[0])
+    cmdData["rot"]["y"]=float(datas[1])
+    if len(datas[2]) > 0:
+        cmdData["rot"]["z"]=float(datas[2])
+
+    return cmdData
+
+def actorScaleFunc(fileName,cmdArgs,cmdData):
+    pattern=cmdPatterns["actor-scale"]
+    res=pattern.match(cmdArgs)
+
+    if not res:
+        print("%sinvalid @actor-scale args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+    
+    datas=res.groups()
+    cmdData["scale"]["x"]=float(datas[0])
+    cmdData["scale"]["y"]=float(datas[1])
+    if len(datas[2]) > 0:
+        cmdData["scale"]["z"]=float(datas[2])
+
+    return cmdData
+
+def actorEndFunc(fileName,cmdArgs,cmdData):
+    global curId
+
+    if not cmdData:
+        print("%sinvalid @actor-end data:%s" % (colorama.Fore.RED,cmdData))
+        return
+    
+    targetData={
+        "id":curId,
+        "nextId":curId+1,
+        "cmd":"actor",
+        "args":cmdData
+    }
+
+    curId=curId+1
+    storyDatas.append(targetData)
+    return True
+
+#教程命令
 def guideFunc(fileName,cmdArgs,cmdData):
     global curId
+
+    id=0
+    strId=""
 
     pattern=cmdPatterns["guide"]
     res=pattern.match(cmdArgs)
     if not res:
-        print("%sInvalid guide args:%s",colorama.Fore.RED,cmdArgs)
-        return
+        strId=cmdArgs
+    else:
+        id=int(cmdArgs)
     
     targetData={
         "id":curId,
         "nextId":curId+1,
         "cmd":"guide",
         "args":{
-            "id":0
+            "id":id,
+            "strId":strId,
         }
     }
-
-    datas=res.groups()
-    targetData["args"]["id"]=int(datas[0])
 
     curId=curId+1
     storyDatas.append(targetData)
@@ -186,6 +353,53 @@ def gotoFunc(fileName,cmdArgs,cmdData):
             "label":"%s_%s" % (fileName,cmdArgs)
         }
     }
+
+    curId=curId+1
+    storyDatas.append(targetData)
+    return True
+
+#切换场景
+def sceneFunc(fileName,cmdArgs,cmdData):
+    global curId
+
+    targetData={
+        "id":curId,
+        "cmd":"scene",
+        "nextId":curId+1,
+        "args":
+        {
+            "id":0,
+            "src":"",
+        }
+    }
+
+    pattern=cmdPatterns["scene"]
+    res=pattern.match(cmdArgs)
+    if res:
+        datas=res.groups()
+        targetData["args"]["id"]=int(datas[0])
+    else:
+        targetData["args"]["src"]=cmdArgs
+
+    curId=curId+1
+    storyDatas.append(targetData)
+    return True
+
+#切换脚本
+def scriptFunc(fileName,cmdArgs,cmdData):
+    global curId
+
+    targetData={
+        "id":curId,
+        "cmd":"scene",
+        "nextId":curId+1,
+        "args":
+        {
+            "src":"",
+        }
+    }
+
+    targetData["args"]["src"]=cmdArgs
 
     curId=curId+1
     storyDatas.append(targetData)
@@ -466,6 +680,9 @@ def videoFunc(fileName,cmdArgs,cmdData):
 
 cmds={
     #显示类
+    #bg命令
+    "@bg":bgFunc,
+
     #msg命令
     "@msg":msgFunc,
     "@msg-start":msgStartFunc,
@@ -473,11 +690,21 @@ cmds={
     "@msg-name":msgNameFunc,
     "@msg-actor":msgActorFunc,
     "@msg-sel":msgSelFunc,
-    "@msg-break":msgBreakFunc,
+    "@msg-async":msgAsyncFunc,
     "@msg-click":msgClickFunc,
     "@msg-end":msgEndFunc,
 
     #控制类
+    #actor命令
+    "@actor-id":actorIdFunc,
+    "@actor-src":actorSrcFunc,
+    "@actor-type":actorTypeFunc,
+    "@actor-start":actorStartFunc,
+    "@actor-pos":actorPosFunc,
+    "@actor-rot":actorRotateFunc,
+    "@actor-scale":actorScaleFunc,
+    "@actor-end":actorEndFunc,
+
     #label命令
     "@label":labelFunc,
 
@@ -489,6 +716,9 @@ cmds={
 
     #guide命令
     "@guide":guideFunc,
+
+    #scene命令
+    "@scene":sceneFunc,
 
     #音频类
     #audio命令
@@ -515,13 +745,15 @@ cmds={
     "@video":videoFunc,
 }
 
-endCmds={
+endCmds={""
     "@msg-end":True,
-    "@audio-end":True
+    "@actor-end":True,
+    "@audio-end":True,
 }
 
 closeCmds={
    "@msg-start":msgEndFunc,
+   "@actor-start":actorEndFunc,
    "@audio-start":audioEndFunc,
 }
 
@@ -533,6 +765,14 @@ cmdLinks={
         "@msg-sel",
         "@msg-break",
         "@msg-click",
+    ],
+    "@actor-start":[
+        "@actor-id",
+        "@actor-src",
+        "@actor-type",
+        "@actor-pos",
+        "@actor-rot",
+        "@actor-scale",
     ],
     "@audio-start":[
         "@audio-id",
@@ -560,6 +800,9 @@ def generateFile(filePath):
         line=1
 
         for it in fileDatas:
+            if len(it) > 0 and it.startswith("#"):
+                continue
+
             cmd=None
             args=None
             it=it.strip()

@@ -1,0 +1,72 @@
+@start 1
+@bg 1
+@bg bg/test.jpg
+@msg StoryTools是一个读取对话文本，生成到excel的工具。
+@msg 小明:StoryTools是一个读取对话文本，生成到excel的工具。
+@msg-start
+@msg-actor 1
+@msg-name 小明
+@msg-text StoryTools是一个读取对话文本，生成到excel的工具。
+@msg-sel 选项1=标签1,选项2=标签2
+@msg-async
+@msg-click 1
+@msg-end
+@guide 1
+@guide test
+@label 标签1
+@wait 0.3
+@actor-start
+@actor-id 1
+@actor-camp 1
+@actor-src actor/test.actor
+@actor-pos 0,0.1
+@actor-rot 0.1
+@actor-scale 0,0.1
+@actor-end
+@actor-start
+@actor-pos 0,0.1,0.2
+@actor-rot 0,0.1
+@actor-scale 0,0.1,0.3
+@actor-end
+@actor-start
+@actor-rot 0,0.1,0.2
+@actor-end
+@audio 1,audio/1.mp3,1
+@audio-start
+@audio-ch 1
+@audio-id 1
+@audio-src bgm/1.mp3
+@audio-vol 50
+@audio-loop 1
+@audio-end
+@audio-stop 1
+@bgm 1
+@bgm bgm/1.mp3
+@se 1
+@se se/1.mp3
+@vo 1
+@vo vo/1.mp3
+@video 1
+@video video/1.mp4
+@shop 1
+@shop weapon
+@scene 1
+@scene scene/test
+@script 1
+@script script/test.txt
+@set value1,string,ABC
+@set value2,number,99
+@set value3,number,100.3
+@sum value1,value2,value3
+@sum value1,2,value3
+@sub value1,value2,value3
+@sub value2,2,value3
+@mul value1,value2,value3
+@mul value3,3,value3
+@div value1,value2,value3
+@div value3,3,value3
+@power value3,2.3,value1
+@sqrt value3,2.1,value1
+@if value1 < value2,标签1
+@if value1 >= 1,标签1
+@if value1 != 1,标签1

@@ -14,6 +14,8 @@
 
 @bg bg/test.jpg
 
+---
+
 ### floatText命令
 说明：显示浮动文本（在屏幕中间）
 
@@ -23,6 +25,8 @@
 例子：
 
 待补充
+
+---
 
 ### msg命令
 说明：显示对话(默认没有选项，不跳过，玩家可到下一个命令)
@@ -138,24 +142,159 @@
 
 ---
 
+### actor-start命令
+说明：角色（放置在2d/3d场景里的角色）命令开始，以@actor-end结束
+
+|可加入的命令|
+|:-:|
+|@actor-id|
+|@actor-src|
+|@actor-camp|
+|@actor-pos|
+|@actor-rot|
+|@actor-scale|
+
+例子：
+
+@actor-start
+
+---
+
+### actor-id命令
+说明：设置角色id
+
+|参数id|参数名|类型|生成类型|作用|
+|:-:|:-:|:-:|:-:|:-:|
+|1|id|int|int|角色id|
+
+例子：
+
+@actor-id 1
+
+---
+
+### actor-camp命令
+说明：设置角色阵营
+
+|参数id|参数名|类型|生成类型|作用|
+|:-:|:-:|:-:|:-:|:-:|
+|1|camp|int|int|角色阵营id|
+
+例子：
+
+@actor-camp 1
+
+注意：
+
+具体效果由调用端定义。
+
+---
+
+### actor-id命令
+说明：设置角色id
+
+|参数id|参数名|类型|生成类型|作用|
+|:-:|:-:|:-:|:-:|:-:|
+|1|id|int|int|角色id|
+
+例子：
+
+@actor-id 1
+
+---
+
+### actor-pos命令
+说明：设置角色坐标
+
+|参数id|参数名|类型|生成类型|作用|
+|:-:|:-:|:-:|:-:|:-:|
+|1|x|float|float|x坐标|
+|2|y|float|float|y坐标|
+|3|z(可选，默认0)|float|float|z坐标|
+
+例子：
+
+@actor-pos 0.0,0.1
+
+@actor-pos 0.0,0.1,0.2
+
+---
+
+### actor-rot命令
+说明：设置角色旋转
+
+|参数id|参数名|类型|生成类型|作用|
+|:-:|:-:|:-:|:-:|:-:|
+|1|x|float|float|x轴旋转|
+|2|y(可选，默认0)|float|float|y轴旋转|
+|3|z(可选，默认0)|float|float|z轴旋转|
+
+例子：
+
+@actor-rot 0.1
+
+@actor-rot 0.0,0.1
+
+@actor-rot 0.0,0.1,0.2
+
+注意：
+
+具体效果由调用端定义，可能是弧度甚至是欧拉角。脚本建议是角度
+
+---
+
+### actor-scale命令
+说明：设置角色缩放
+
+|参数id|参数名|类型|生成类型|作用|
+|:-:|:-:|:-:|:-:|:-:|
+|1|x|float|float|x轴缩放|
+|2|y|float|float|y轴缩放|
+|3|z(可选，默认1)|float|float|z轴缩放|
+
+例子：
+
+@actor-scale 0.0,0.1
+
+@actor-scale 0.0,0.1,0.2
+
+### actor-end命令
+说明：角色命令结束
+
 ## 控制类
+
+### shop命令
+说明：打开商店
+
+|参数id|参数名|类型|生成类型|作用|
+|:-:|:-:|:-:|:-:|:-:|
+|1|id|int|int|商店id|
+|1|strId|string|string|商店id|
+
+例子：
+
+@shop 1
+
+@shop weapon
+
 ### guide命令
 说明：打开引导界面
 
 |参数id|参数名|类型|生成类型|作用|
 |:-:|:-:|:-:|:-:|:-:|
-|1|id/src|int/string|int/string|引导id/引导路径|
+|1|id|int|int|引导id|
+|1|strId|string|string|引导id|
 
 例子：
 
 @guide 1
 
-@guide guide/move
+@guide move
 
 ---
 
 ### label命令
-说明：设置标签(供@msg-sel/@if/@else/@switch/@goto使用)
+说明：设置标签(供@msg-sel/@if/@goto使用)
 
 |参数id|参数名|类型|生成类型|作用|
 |:-:|:-:|:-:|:-:|:-:|
@@ -164,6 +303,36 @@
 例子：
 
 @label 标签1
+
+### scene命令
+说明：切换场景
+
+|参数id|参数名|类型|生成类型|作用|
+|:-:|:-:|:-:|:-:|:-:|
+|1|id|int|int|场景id|
+|1|src|string|string|场景资源|
+
+例子：
+
+@scene 1
+
+@scene scene/test
+
+---
+
+### script命令
+说明：切换脚本
+
+|参数id|参数名|类型|生成类型|作用|
+|:-:|:-:|:-:|:-:|:-:|
+|1|id|int|int|脚本id|
+|1|src|string|string|脚本资源|
+
+例子：
+
+@script 1
+
+@script script/test.txt
 
 ---
 
@@ -177,6 +346,139 @@
 例子：
 
 @wait 0.3
+
+### set命令
+说明：设置变量
+
+|参数id|参数名|类型|生成类型|作用|
+|:-:|:-:|:-:|:-:|:-:|
+|1|name|string|string|变量名|
+|2|type|string|string|数据类型(支持string,number)|
+|3|value|string/float|string/float|变量|
+|4|int|bool|系统存档，将会保存到另外一个存档里|
+
+例子：
+
+@set value1,string,ABC
+
+@set value2,number,99
+
+@set value3,number,100.3
+
+### sum命令
+说明：变量加算
+|参数id|参数名|类型|生成类型|作用|
+|:-:|:-:|:-:|:-:|:-:|
+|1|left|float/string|float/string|第1个数值/变量|
+|2|right|float/string|float/string|第2个数值/变量|
+|3|target|string|string|目标变量|
+
+例子：
+
+@sum value1,value2,value3
+
+@sum value1,2,value3
+
+---
+
+### sub命令
+说明：变量减算
+|参数id|参数名|类型|生成类型|作用|
+|:-:|:-:|:-:|:-:|:-:|
+|1|left|float/string|float/string|第1个数值/变量|
+|2|right|float/string|float/string|第2个数值/变量|
+|3|target|string|string|目标变量|
+
+例子：
+
+@sum value1,value2,value3
+
+@sum value1,2,value3
+
+### mul命令
+说明：变量乘算
+|参数id|参数名|类型|生成类型|作用|
+|:-:|:-:|:-:|:-:|:-:|
+|1|left|float/string|float/string|第1个数值/变量|
+|2|right|float/string|float/string|第2个数值/变量|
+|3|target|string|string|目标变量|
+
+例子：
+
+@mul value1,value2,value3
+
+@mul value1,2,value3
+
+---
+
+### div命令
+说明：变量除算
+|参数id|参数名|类型|生成类型|作用|
+|:-:|:-:|:-:|:-:|:-:|
+|1|left|float/string|float/string|第1个数值/变量|
+|2|right|float/string|float/string|第2个数值(除数不能为0)/变量|
+|3|target|string|string|目标变量|
+
+例子：
+
+@div value1,value2,value3
+
+@div value1,2,value3
+
+---
+
+### power命令
+说明：变量乘方
+|参数id|参数名|类型|生成类型|作用|
+|:-:|:-:|:-:|:-:|:-:|
+|1|left|float/string|float/string|第1个数值/变量|
+|2|right|float/string|float/string|第2个数值(不能为0)|
+|3|target|string|string|目标变量|
+
+例子：
+
+@power value1,value2,value3
+
+@power value1,2,value3
+
+---
+
+### sqrt命令
+说明：变量开方
+|参数id|参数名|类型|生成类型|作用|
+|:-:|:-:|:-:|:-:|:-:|
+|1|left|float/string|float/string|第1个数值/变量|
+|2|right|float/string|float/string|第2个数值(不能为0)|
+|3|target|string|string|目标变量|
+
+例子：
+
+@sqrt value1,value2,value3
+
+@sqrt value1,2,value3
+
+---
+
+### if命令
+说明：条件判断
+
+|参数id|参数名|类型|生成类型|作用|
+|:-:|:-:|:-:|:-:|:-:|
+|1|/|string|/|布尔表达式,同时生成left、operator和right字段|
+|/|left|/|string|第1个数值/变量|
+|/|operator|/|string|判断符号，支持<>=!|
+|/|right|/|string|第2个数值/变量|
+|2|label|string|string|第2个数值(不能为0)|
+
+例子：
+
+@if value1 < value2,标签1
+@if value1 >= 2,标签1
+@if value1 != 1,标签1
+
+注意：
+
+判断符号前后要加空格" "
 
 ---
 

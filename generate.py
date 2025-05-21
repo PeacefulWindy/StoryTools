@@ -13,19 +13,24 @@ storyDatas=[]
 storyLabels=[]
 useIds=[]
 curId=0
+valueNames=[]
 
 cmdPatterns={
+    "digit":re.compile(r'^([\d\.]+)$'),
     "bg":re.compile(r'^([\d]+)$'),
     "scene":re.compile(r'^([\d]+)$'),
     "msg":re.compile(r'^([\d]+)\:(.*)$'),
     "msgName":re.compile(r'^([^:]*)(.*)$'),
     "actor-id":re.compile(r'^([\d]+)$'),
-    "actor-type":re.compile(r'^([\d]+)$'),
+    "actor-camp":re.compile(r'^([\d]+)$'),
     "actor-pos":re.compile(r'^([\d\.]+)\,([\d\.]+)[\,]?([\d\.]*)$'),
-    "actor-rot":re.compile(r'^([\d\.]+)\,([\d\.]+)[\,]?([\d\.]*)$'),
+    "actor-rot":re.compile(r'^([\d\.]+)[\,]?([\d\.]*)[\,]?([\d\.]*)$'),
     "actor-scale":re.compile(r'^([\d\.]+)\,([\d\.]+)[\,]?([\d\.]*)$'),
+    "shop":re.compile(r'^([\d]+)$'),
     "guide":re.compile(r'^([\d]+)$'),
     "wait":re.compile(r'^([\d\.]+)$'),
+    "set":re.compile(r'^(.*)\,(.*)\,(.*)[\,]*([\d]?)$'),
+    "if":re.compile(r'(.*) ([><=!]+) (.*)\,(.*)$'),
     "audio":re.compile(r'^([\d]+)\,(.*)$'),
     "audio-stop":re.compile(r'^([\d]+)$'),
     "bgm":re.compile(r'^([\d]+)$'),
@@ -33,11 +38,14 @@ cmdPatterns={
     "vo":re.compile(r'^([\d]+)$'),
 }
 
-#显示类
-#背景类
-def bgFunc(fileName,cmdArgs,cmdData):
+def addId():
     global curId
+    useIds.append(curId)
+    curId=curId+1
 
+#显示类
+#背景命令
+def bgFunc(fileName,cmdArgs,cmdData):
     targetData={
         "id":curId,
         "cmd":"bg",
@@ -57,14 +65,12 @@ def bgFunc(fileName,cmdArgs,cmdData):
     else:
         targetData["args"]["src"]=cmdArgs
 
-    curId=curId+1
+    addId()
     storyDatas.append(targetData)
     return True
 
 #对话命令
 def msgFunc(fileName,cmdArgs,cmdData):
-    global curId
-
     targetData={
         "id":curId,
         "cmd":"msg",
@@ -96,7 +102,7 @@ def msgFunc(fileName,cmdArgs,cmdData):
         targetData["args"]["name"]=datas[0]
         targetData["args"]["text"]=datas[1]
 
-    curId=curId+1
+    addId()
     storyDatas.append(targetData)
     return True
 
@@ -144,7 +150,7 @@ def msgSelFunc(fileName,cmdArgs,cmdData):
     return cmdData
 
 def msgAsyncFunc(fileName,cmdArgs,cmdData):
-    cmdData["break"]=True
+    cmdData["async"]=True
 
     return cmdData
 
@@ -158,8 +164,6 @@ def msgClickFunc(fileName,cmdArgs,cmdData):
     return cmdData
 
 def msgEndFunc(fileName,cmdArgs,cmdData):
-    global curId
-
     if not cmdData:
         print("%sinvalid @msg-end data:%s" % (colorama.Fore.RED,cmdData))
         return
@@ -173,16 +177,15 @@ def msgEndFunc(fileName,cmdArgs,cmdData):
     if not cmdData or not "sel" in cmdData:
         targetData["nextId"]=curId+1
 
-    curId=curId+1
+    addId()
     storyDatas.append(targetData)
     return True
 
-#控制类
-#角色类
+#角色命令
 def actorStartFunc(fileName,cmdArgs,cmdData):
     data={
         "id":0,
-        "type":0,
+        "camp":0,
         "pos":
         {
             "x":0,
@@ -217,16 +220,16 @@ def actorIdFunc(fileName,cmdArgs,cmdData):
 
     return cmdData
 
-def actorTypeFunc(fileName,cmdArgs,cmdData):
-    pattern=cmdPatterns["actor-type"]
+def actorCampFunc(fileName,cmdArgs,cmdData):
+    pattern=cmdPatterns["actor-camp"]
     res=pattern.match(cmdArgs)
 
     if not res:
-        print("%sinvalid @actor-type args:%s" % (colorama.Fore.RED,cmdArgs))
+        print("%sinvalid @actor-camp args:%s" % (colorama.Fore.RED,cmdArgs))
         return
 
     datas=res.groups()
-    cmdData["type"]=int(datas[0])
+    cmdData["camp"]=int(datas[0])
 
     return cmdData
 
@@ -261,7 +264,9 @@ def actorRotateFunc(fileName,cmdArgs,cmdData):
     
     datas=res.groups()
     cmdData["rot"]["x"]=float(datas[0])
-    cmdData["rot"]["y"]=float(datas[1])
+    
+    if len(datas[1]) > 0:
+        cmdData["rot"]["y"]=float(datas[1])
     if len(datas[2]) > 0:
         cmdData["rot"]["z"]=float(datas[2])
 
@@ -284,8 +289,6 @@ def actorScaleFunc(fileName,cmdArgs,cmdData):
     return cmdData
 
 def actorEndFunc(fileName,cmdArgs,cmdData):
-    global curId
-
     if not cmdData:
         print("%sinvalid @actor-end data:%s" % (colorama.Fore.RED,cmdData))
         return
@@ -297,14 +300,39 @@ def actorEndFunc(fileName,cmdArgs,cmdData):
         "args":cmdData
     }
 
-    curId=curId+1
+    addId()
+    storyDatas.append(targetData)
+    return True
+
+#控制类
+#商店命令
+def shopFunc(fileName,cmdArgs,cmdData):
+    id=0
+    strId=""
+
+    pattern=cmdPatterns["shop"]
+    res=pattern.match(cmdArgs)
+    if not res:
+        strId=cmdArgs
+    else:
+        id=int(cmdArgs)
+    
+    targetData={
+        "id":curId,
+        "nextId":curId+1,
+        "cmd":"shop",
+        "args":{
+            "id":id,
+            "strId":strId,
+        }
+    }
+
+    addId()
     storyDatas.append(targetData)
     return True
 
 #教程命令
 def guideFunc(fileName,cmdArgs,cmdData):
-    global curId
-
     id=0
     strId=""
 
@@ -325,27 +353,23 @@ def guideFunc(fileName,cmdArgs,cmdData):
         }
     }
 
-    curId=curId+1
+    addId()
     storyDatas.append(targetData)
     return True
 
 #标签命令
 def labelFunc(fileName,cmdArgs,cmdData):
-    global curId
-    
     targetData={
         "id":"%s_%s" % (fileName,cmdArgs),
         "nextId":curId+1
     }
     
-    curId=curId+1
+    addId()
     storyLabels.append(targetData)
     return True
 
 #跳转命令
 def gotoFunc(fileName,cmdArgs,cmdData):
-    global curId
-
     targetData={
         "id":curId,
         "cmd":"goto",
@@ -354,14 +378,12 @@ def gotoFunc(fileName,cmdArgs,cmdData):
         }
     }
 
-    curId=curId+1
+    addId()
     storyDatas.append(targetData)
     return True
 
 #切换场景
 def sceneFunc(fileName,cmdArgs,cmdData):
-    global curId
-
     targetData={
         "id":curId,
         "cmd":"scene",
@@ -381,14 +403,12 @@ def sceneFunc(fileName,cmdArgs,cmdData):
     else:
         targetData["args"]["src"]=cmdArgs
 
-    curId=curId+1
+    addId()
     storyDatas.append(targetData)
     return True
 
 #切换脚本
 def scriptFunc(fileName,cmdArgs,cmdData):
-    global curId
-
     targetData={
         "id":curId,
         "cmd":"scene",
@@ -401,14 +421,12 @@ def scriptFunc(fileName,cmdArgs,cmdData):
 
     targetData["args"]["src"]=cmdArgs
 
-    curId=curId+1
+    addId()
     storyDatas.append(targetData)
     return True
 
 #等待命令
 def waitFunc(fileName,cmdArgs,cmdData):
-    global curId
-
     pattern=cmdPatterns["wait"]
     res=pattern.match(cmdArgs)
     if not res:
@@ -427,15 +445,348 @@ def waitFunc(fileName,cmdArgs,cmdData):
     datas=res.groups()
     targetData["args"]["time"]=float(datas[0])
 
-    curId=curId+1
+    addId()
+    storyDatas.append(targetData)
+    return True
+
+#设置变量命令
+def setFunc(fileName,cmdArgs,cmdData):
+    pattern=cmdPatterns["set"]
+    res=pattern.match(cmdArgs)
+    if not res:
+        print("%sinvalid @set args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+
+    datas=res.groups()
+    name=datas[0]
+    type=datas[1]
+    value=None
+    isSys=False
+
+    if type == "string":
+        value=datas[2]
+    elif type == "number":
+        value=float(datas[2])
+    else:
+        print("%sinvalid @set value type:%s" % (colorama.Fore.RED,type))
+        return
+    
+    if len(datas[3]) >= 0 and datas[3] == "1":
+        isSys=True
+
+    targetData={
+        "id":curId,
+        "nextId":curId+1,
+        "cmd":"set",
+        "args":
+        {
+            "name":name,
+            "value":value,
+            "sys":isSys
+        }
+    }
+
+    addId()
+    storyDatas.append(targetData)
+    valueNames.append(name)
+    return True
+
+def sumFunc(fileName,cmdArgs,cmdData):
+    index=cmdArgs.find(",")
+    if not index:
+        print("%sInvalid @sum args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+    
+    left=cmdArgs[:index]
+    index2=cmdArgs.rfind(",")
+    right=cmdArgs[index+1:index2]
+    target=cmdArgs[index2+1:]
+
+    pattern=cmdPatterns["digit"]
+    if not left in valueNames and pattern.match(left):
+        left=float(left)
+
+    if not right in valueNames and pattern.match(right):
+        right=float(right)
+
+    if not target in valueNames:
+        print("%sInvalid @sum args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+
+    targetData={
+        "id":curId,
+        "nextId":curId+1,
+        "cmd":"sum",
+        "args":
+        {
+            "left":left,
+            "right":right,
+            "target":target,
+        }
+    }
+
+    addId()
+    storyDatas.append(targetData)
+    return True
+
+def subFunc(fileName,cmdArgs,cmdData):
+    index=cmdArgs.find(",")
+    if not index:
+        print("%sInvalid @sub args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+    
+    left=cmdArgs[:index]
+    index2=cmdArgs.rfind(",")
+    right=cmdArgs[index+1:index2]
+    target=cmdArgs[index2+1:]
+
+    pattern=cmdPatterns["digit"]
+    if not left in valueNames and pattern.match(left):
+        left=float(left)
+
+    if not right in valueNames and pattern.match(right):
+        right=float(right)
+    
+    if not target in valueNames:
+        print("%sInvalid @sub args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+
+    targetData={
+        "id":curId,
+        "nextId":curId+1,
+        "cmd":"sub",
+        "args":
+        {
+            "left":left,
+            "right":right,
+            "target":target,
+        }
+    }
+
+    addId()
+    storyDatas.append(targetData)
+    return True
+
+def mulFunc(fileName,cmdArgs,cmdData):
+    index=cmdArgs.find(",")
+    if not index:
+        print("%sInvalid @mul args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+    
+    left=cmdArgs[:index]
+    index2=cmdArgs.rfind(",")
+    right=cmdArgs[index+1:index2]
+    target=cmdArgs[index2+1:]
+
+    pattern=cmdPatterns["digit"]
+    if not left in valueNames and pattern.match(left):
+        left=float(left)
+
+    if not right in valueNames and pattern.match(right):
+        right=float(right)
+    
+    if not target in valueNames:
+        print("%sInvalid @mul args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+
+    targetData={
+        "id":curId,
+        "nextId":curId+1,
+        "cmd":"mul",
+        "args":
+        {
+            "left":left,
+            "right":right,
+            "target":target,
+        }
+    }
+
+    addId()
+    storyDatas.append(targetData)
+    return True
+
+def divFunc(fileName,cmdArgs,cmdData):
+    index=cmdArgs.find(",")
+    if not index:
+        print("%sInvalid @div args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+    
+    left=cmdArgs[:index]
+    index2=cmdArgs.rfind(",")
+    right=cmdArgs[index+1:index2]
+    target=cmdArgs[index2+1:]
+
+    pattern=cmdPatterns["digit"]
+    if not left in valueNames and pattern.match(left):
+        left=float(left)
+
+    if not right in valueNames and pattern.match(right):
+        right=float(right)
+        if right == 0:
+            print("%sInvalid @div args:%s" % (colorama.Fore.RED,cmdArgs))
+            return
+    
+    if not target in valueNames:
+        print("%sInvalid @div args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+
+    targetData={
+        "id":curId,
+        "nextId":curId+1,
+        "cmd":"div",
+        "args":
+        {
+            "left":left,
+            "right":right,
+            "target":target,
+        }
+    }
+
+    addId()
+    storyDatas.append(targetData)
+    return True
+
+def powerFunc(fileName,cmdArgs,cmdData):
+    index=cmdArgs.find(",")
+    if not index:
+        print("%sInvalid @power args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+    
+    left=cmdArgs[:index]
+    index2=cmdArgs.rfind(",")
+    right=cmdArgs[index+1:index2]
+    target=cmdArgs[index2+1:]
+
+    pattern=cmdPatterns["digit"]
+    if not left in valueNames and pattern.match(left):
+        left=float(left)
+
+    if not pattern.match(right):
+        print("%sInvalid @power args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+    
+    right=float(right)
+    if right == 0:
+        print("%sInvalid @power args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+    
+    if not target in valueNames:
+        print("%sInvalid @power args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+
+    targetData={
+        "id":curId,
+        "nextId":curId+1,
+        "cmd":"power",
+        "args":
+        {
+            "left":left,
+            "right":right,
+            "target":target,
+        }
+    }
+
+    addId()
+    storyDatas.append(targetData)
+    return True
+
+def sqrtFunc(fileName,cmdArgs,cmdData):
+    index=cmdArgs.find(",")
+    if not index:
+        print("%sInvalid @sqrt args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+    
+    left=cmdArgs[:index]
+    index2=cmdArgs.rfind(",")
+    right=cmdArgs[index+1:index2]
+    target=cmdArgs[index2+1:]
+
+    pattern=cmdPatterns["digit"]
+    if not left in valueNames and pattern.match(left):
+        left=float(left)
+
+    if not pattern.match(right):
+        print("%sInvalid @sqrt args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+    
+    right=float(right)
+    if right == 0:
+        print("%sInvalid @sqrt args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+    
+    if not target in valueNames:
+        print("%sInvalid @sqrt args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+
+    targetData={
+        "id":curId,
+        "nextId":curId+1,
+        "cmd":"sqrt",
+        "args":
+        {
+            "left":left,
+            "right":right,
+            "target":target,
+        }
+    }
+
+    addId()
+    storyDatas.append(targetData)
+    return True
+
+def ifFunc(fileName,cmdArgs,cmdData):
+    pattern=cmdPatterns["if"]
+    res=pattern.match(cmdArgs)
+    if not res:
+        print("%sInvalid @if args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+    
+    datas=res.groups()
+    pattern=cmdPatterns["digit"]
+    
+    left=datas[0]
+    operator=datas[1].strip()
+    right=datas[2]
+    label=datas[3]
+
+    if not left in valueNames:
+        if not pattern.match(left):
+            print("%sInvalid @if args:%s" % (colorama.Fore.RED,cmdArgs))
+            return
+        else:
+            left=float(left)
+    
+    if not right in valueNames:
+        if not pattern.match(right):
+            print("%sInvalid @if args:%s" % (colorama.Fore.RED,cmdArgs))
+            return
+        else:
+            right=float(right)
+    
+    if operator != ">" and operator != "<" and operator != "=" and operator != "!=" and operator != ">=" and operator != "<=":
+        print("%sInvalid @if args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+    
+    targetData={
+        "id":curId,
+        "nextId":curId+1,
+        "cmd":"if",
+        "args":
+        {
+            "left":left,
+            "operator":operator,
+            "right":right,
+            "label":label
+        }
+    }
+
+    addId()
     storyDatas.append(targetData)
     return True
 
 #音频类
 #播放音频
 def audioFunc(fileName,cmdArgs,cmdData):
-    global curId
-
     pattern=cmdPatterns["audio"]
     res=pattern.match(cmdArgs)
     if not res:
@@ -459,7 +810,7 @@ def audioFunc(fileName,cmdArgs,cmdData):
     targetData["args"]["ch"]=int(datas[0])
     targetData["args"]["src"]=datas[1]
 
-    curId=curId+1
+    addId()
     storyDatas.append(targetData)
     return True
 
@@ -520,8 +871,6 @@ def audioLoopFunc(fileName,cmdArgs,cmdData):
     return cmdData
 
 def audioEndFunc(fileName,cmdArgs,cmdData):
-    global curId
-
     if not cmdData:
         print("%sinvalid @audio-end data:%s" % (colorama.Fore.RED,cmdData))
         return
@@ -533,18 +882,16 @@ def audioEndFunc(fileName,cmdArgs,cmdData):
         "args":cmdData
     }
 
-    curId=curId+1
+    addId()
     storyDatas.append(targetData)
     return True
 
 #关闭音频
 def audioStopFunc(fileName,cmdArgs,cmdData):
-    global curId
-
     pattern=cmdPatterns["audio-stop"]
     res=pattern.match(cmdArgs)
     if not res:
-        print("%sInvalid guide args:%s",colorama.Fore.RED,cmdArgs)
+        print("%sInvalid guide args:%s" % (colorama.Fore.RED,cmdArgs))
         return
     
     targetData={
@@ -559,13 +906,11 @@ def audioStopFunc(fileName,cmdArgs,cmdData):
     datas=res.groups()
     targetData["args"]["id"]=int(datas[0])
 
-    curId=curId+1
+    addId()
     storyDatas.append(targetData)
     return True
 
 def bgmFunc(fileName,cmdArgs,cmdData):
-    global curId
-
     id=0
     src=""
     pattern=cmdPatterns["bgm"]
@@ -591,13 +936,11 @@ def bgmFunc(fileName,cmdArgs,cmdData):
         }
     }
 
-    curId=curId+1
+    addId()
     storyDatas.append(targetData)
     return True
 
 def seFunc(fileName,cmdArgs,cmdData):
-    global curId
-
     id=0
     src=""
     pattern=cmdPatterns["se"]
@@ -623,13 +966,11 @@ def seFunc(fileName,cmdArgs,cmdData):
         }
     }
 
-    curId=curId+1
+    addId()
     storyDatas.append(targetData)
     return True
 
 def voFunc(fileName,cmdArgs,cmdData):
-    global curId
-
     id=0
     src=""
     pattern=cmdPatterns["vo"]
@@ -655,13 +996,11 @@ def voFunc(fileName,cmdArgs,cmdData):
         }
     }
 
-    curId=curId+1
+    addId()
     storyDatas.append(targetData)
     return True
 
 def videoFunc(fileName,cmdArgs,cmdData):
-    global curId
-
     targetData={
         "id":curId,
         "nextId":curId+1,
@@ -674,7 +1013,7 @@ def videoFunc(fileName,cmdArgs,cmdData):
         }
     }
 
-    curId=curId+1
+    addId()
     storyDatas.append(targetData)
     return True
 
@@ -694,16 +1033,19 @@ cmds={
     "@msg-click":msgClickFunc,
     "@msg-end":msgEndFunc,
 
-    #控制类
     #actor命令
     "@actor-id":actorIdFunc,
     "@actor-src":actorSrcFunc,
-    "@actor-type":actorTypeFunc,
+    "@actor-camp":actorCampFunc,
     "@actor-start":actorStartFunc,
     "@actor-pos":actorPosFunc,
     "@actor-rot":actorRotateFunc,
     "@actor-scale":actorScaleFunc,
     "@actor-end":actorEndFunc,
+
+    #控制类
+    #shop命令
+    "@shop":shopFunc,
 
     #label命令
     "@label":labelFunc,
@@ -719,6 +1061,33 @@ cmds={
 
     #scene命令
     "@scene":sceneFunc,
+
+    #script命令
+    "@script":scriptFunc,
+
+    #set命令
+    "@set":setFunc,
+
+    #sum命令
+    "@sum":sumFunc,
+
+    #sub命令
+    "@sub":subFunc,
+
+    #mul命令
+    "@mul":mulFunc,
+
+    #div命令
+    "@div":divFunc,
+
+    # #power命令
+    "@power":powerFunc,
+
+    #sqrt命令
+    "@sqrt":sqrtFunc,
+
+    #if命令
+    "@if":ifFunc,
 
     #音频类
     #audio命令
@@ -769,7 +1138,7 @@ cmdLinks={
     "@actor-start":[
         "@actor-id",
         "@actor-src",
-        "@actor-type",
+        "@actor-camp",
         "@actor-pos",
         "@actor-rot",
         "@actor-scale",
@@ -800,12 +1169,12 @@ def generateFile(filePath):
         line=1
 
         for it in fileDatas:
+            it=it.strip()
             if len(it) > 0 and it.startswith("#"):
                 continue
 
             cmd=None
             args=None
-            it=it.strip()
             index=it.find(" ")
             if index == -1:
                 cmd=it
@@ -822,11 +1191,11 @@ def generateFile(filePath):
                 try:
                     id=int(args)
                 except ValueError as e:
-                    print("%sinvalid @start cmd!" % (args))
+                    print("%sinvalid @start cmd!" % (colorama.Fore.Red,args))
                     return
 
                 if id in useIds:
-                    print("%srepeat @start id:%d" % (args,id))
+                    print("%srepeat @start id:%d" % (colorama.Fore.Red,args,id))
                     return
                 
                 curId=id
@@ -834,7 +1203,7 @@ def generateFile(filePath):
                 continue
 
             if curId in useIds:
-                print("%srepeat @start id:%d" % (args,id))
+                print("%srepeat @start id:%d" % (colorama.Fore.RED,id))
                 return
             
             if not cmd in cmds:

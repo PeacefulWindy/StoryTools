@@ -361,10 +361,9 @@ def guideFunc(fileName,cmdArgs,cmdData):
 def labelFunc(fileName,cmdArgs,cmdData):
     targetData={
         "id":"%s_%s" % (fileName,cmdArgs),
-        "nextId":curId+1
+        "nextId":curId
     }
-    
-    addId()
+
     storyLabels.append(targetData)
     return True
 
@@ -1182,6 +1181,9 @@ def generateFile(filePath):
                 cmd=it[0:index]
                 args=it[index+1:]
             
+            if len(cmd) <= 0:
+                continue
+            
             if not headerCheck:
                 if cmd != "@start":
                     print("%sinvalid file:%s\n" % (colorama.Fore.RED,filePath))
@@ -1191,11 +1193,11 @@ def generateFile(filePath):
                 try:
                     id=int(args)
                 except ValueError as e:
-                    print("%sinvalid @start cmd!" % (colorama.Fore.Red,args))
+                    print("%sinvalid @start cmd!" % (colorama.Fore.RED,args))
                     return
 
                 if id in useIds:
-                    print("%srepeat @start id:%d" % (colorama.Fore.Red,args,id))
+                    print("%srepeat @start id:%d" % (colorama.Fore.RED,id))
                     return
                 
                 curId=id
@@ -1220,7 +1222,7 @@ def generateFile(filePath):
                 prevCmd=None
             elif cmd in cmdLinks:
                 prevCmd=cmd
-            elif cmd in endCmds or cmd in cmds:
+            elif cmd in endCmds or not cmd in cmds:
                 prevCmd=None
 
             cmdFunc=cmds[cmd]
@@ -1316,6 +1318,18 @@ def generateExcel(outputPath):
     wb.save(outputPath)
 
 def main(configData):
+    global storyDatas
+    storyDatas=[]
+
+    global storyLabels
+    storyLabels=[]
+
+    global useIds
+    useIds=[]
+
+    global valueNames
+    valueNames=[]
+
     inputPath=os.path.abspath(configData["input"])
     outputPath=os.path.abspath(configData["output"])
 

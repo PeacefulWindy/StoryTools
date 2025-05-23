@@ -96,7 +96,7 @@ def msgFunc(fileName,cmdArgs,cmdData):
         else:
             datas=res.groups()
             targetData["args"]["name"]=datas[0]
-            targetData["args"]["text"]=datas[1]
+            targetData["args"]["text"]=datas[1].replace("\\n","\n")
     else:
         datas=res.groups()
         targetData["args"]["name"]=datas[0]
@@ -155,7 +155,7 @@ def msgAsyncFunc(fileName,cmdArgs,cmdData):
     return cmdData
 
 def msgTextFunc(fileName,cmdArgs,cmdData):
-    cmdData["text"]=cmdArgs
+    cmdData["text"]=cmdArgs.replace("\\n","\n")
     return cmdData
 
 def msgClickFunc(fileName,cmdArgs,cmdData):
@@ -1212,17 +1212,17 @@ def generateFile(filePath):
                 print("%sunknown cmd:%s,ignore" % (colorama.Fore.YELLOW,cmd))
                 continue
 
-            if prevCmd and not cmd in cmdLinks[prevCmd]:
+            if cmd in endCmds or not cmd in cmds:
+                prevCmd=None
+            elif cmd in cmdLinks:
+                prevCmd=cmd
+            elif prevCmd and not cmd in cmdLinks[prevCmd]:
                 print("%scmd %s not close,will auto close it!" % (colorama.Fore.YELLOW,prevCmd))
                 cmdFunc=closeCmds[prevCmd]
                 ret=cmdFunc(fileName,args,data)
                 if not ret:
                     return
                 
-                prevCmd=None
-            elif cmd in cmdLinks:
-                prevCmd=cmd
-            elif cmd in endCmds or not cmd in cmds:
                 prevCmd=None
 
             cmdFunc=cmds[cmd]

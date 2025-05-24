@@ -14,6 +14,7 @@ storyLabels=[]
 useIds=[]
 curId=0
 valueNames=[]
+scriptIds=[]
 
 cmdPatterns={
     "digit":re.compile(r'^([\d\.]+)$'),
@@ -1202,6 +1203,11 @@ def generateFile(filePath):
                 
                 curId=id
                 headerCheck=True
+
+                scriptIds.append({
+                    "id":fileName,
+                    "nextId":curId,
+                })
                 continue
 
             if curId in useIds:
@@ -1314,6 +1320,22 @@ def generateExcel(outputPath):
         sheet["A%d"%index].value=it["id"]
         sheet["B%d"%index].value=it["nextId"]
         index=index+1
+    
+    #生成脚本跳转id
+    sheet=wb.create_sheet("#StoryScript")
+    sheet["A1"].value="id"
+    sheet["A2"].value="string"
+    sheet["A3"].value="对话脚本id"
+
+    sheet["B1"].value="nextId"
+    sheet["B2"].value="int"
+    sheet["B3"].value="下一个对话id"
+
+    index=4
+    for it in scriptIds:
+        sheet["A%d"%index].value=it["id"]
+        sheet["B%d"%index].value=it["nextId"]
+        index=index+1
 
     wb.save(outputPath)
 
@@ -1329,6 +1351,9 @@ def main(configData):
 
     global valueNames
     valueNames=[]
+
+    global scriptIds
+    scriptIds=[]
 
     inputPath=os.path.abspath(configData["input"])
     outputPath=os.path.abspath(configData["output"])

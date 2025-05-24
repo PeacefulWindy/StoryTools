@@ -17,6 +17,7 @@ valueNames=[]
 scriptIds=[]
 
 cmdPatterns={
+    "color":re.compile(r'^([#][0-9A-Fa-f]{6}|[#][0-9A-Fa-f]{3})$'),
     "digit":re.compile(r'^([\d\.]+)$'),
     "bg":re.compile(r'^([\d]+)$'),
     "scene":re.compile(r'^([\d]+)$'),
@@ -70,6 +71,57 @@ def bgFunc(fileName,cmdArgs,cmdData):
     storyDatas.append(targetData)
     return True
 
+#浮动文本命令
+def floatTextStartFunc(fileName,cmdArgs,cmdData):
+    args={
+        "text":"",
+        "color":"",
+        "time":0,
+    }
+
+    return args
+
+def floatTextSetTextFunc(fileName,cmdArgs,cmdData):
+    cmdData["text"]=cmdArgs
+    return cmdData
+
+def floatTextColorFunc(fileName,cmdArgs,cmdData):
+    pattern=cmdPatterns["color"]
+    res=pattern.match(cmdArgs)
+
+    if not res:
+        print("%sinvalid @floatText-color args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+
+    datas=res.groups()
+    cmdData["color"]=datas[0]
+    return cmdData
+
+def floatTextTimeFunc(fileName,cmdArgs,cmdData):
+    try:
+        cmdData["time"]=float(cmdArgs)
+    except Exception as e:
+        print("%sinvalid @floatText-time args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+    
+    return cmdData
+
+def floatTextEndFunc(fileName,cmdArgs,cmdData):
+    if not cmdData:
+        print("%sinvalid @floatText-end data:%s" % (colorama.Fore.RED,cmdData))
+        return
+    
+    targetData={
+        "id":curId,
+        "nextId":curId+1,
+        "cmd":"floatText",
+        "args":cmdData
+    }
+
+    addId()
+    storyDatas.append(targetData)
+    return True
+
 #对话命令
 def msgFunc(fileName,cmdArgs,cmdData):
     targetData={
@@ -81,7 +133,7 @@ def msgFunc(fileName,cmdArgs,cmdData):
             "name":"",
             "text":"",
             "actor":0,
-            "sel":{},
+            "sel":[],
             "async":False,
             "click":True,
         }
@@ -411,7 +463,7 @@ def sceneFunc(fileName,cmdArgs,cmdData):
 def scriptFunc(fileName,cmdArgs,cmdData):
     targetData={
         "id":curId,
-        "cmd":"scene",
+        "cmd":"script",
         "nextId":curId+1,
         "args":
         {
@@ -1022,6 +1074,13 @@ cmds={
     #bg命令
     "@bg":bgFunc,
 
+    #floatText命令
+    "@floatText-start":floatTextStartFunc,
+    "@floatText-text":floatTextSetTextFunc,
+    "@floatText-color":floatTextColorFunc,
+    "@floatText-time":floatTextTimeFunc,
+    "@floatText-end":floatTextEndFunc,
+
     #msg命令
     "@msg":msgFunc,
     "@msg-start":msgStartFunc,
@@ -1114,25 +1173,32 @@ cmds={
     "@video":videoFunc,
 }
 
-endCmds={""
+endCmds={
+    "@floatText-end":True,
     "@msg-end":True,
     "@actor-end":True,
     "@audio-end":True,
 }
 
 closeCmds={
-   "@msg-start":msgEndFunc,
-   "@actor-start":actorEndFunc,
-   "@audio-start":audioEndFunc,
+    "@floatText-start":floatTextEndFunc,
+    "@msg-start":msgEndFunc,
+    "@actor-start":actorEndFunc,
+    "@audio-start":audioEndFunc,
 }
 
 cmdLinks={
+    "@floatText-start":[
+        "@floatText-text",
+        "@floatText-color",
+        "@floatText-time",
+    ],
     "@msg-start":[
         "@msg-text",
         "@msg-name",
         "@msg-actor",
         "@msg-sel",
-        "@msg-break",
+        "@msg-async",
         "@msg-click",
     ],
     "@actor-start":[
@@ -1223,7 +1289,7 @@ def generateFile(filePath):
             elif cmd in cmdLinks:
                 prevCmd=cmd
             elif prevCmd and not cmd in cmdLinks[prevCmd]:
-                print("%scmd %s not close,will auto close it!" % (colorama.Fore.YELLOW,prevCmd))
+                print("%scmd %s not close at line %d,will auto close it!" % (colorama.Fore.YELLOW,prevCmd,line))
                 cmdFunc=closeCmds[prevCmd]
                 ret=cmdFunc(fileName,args,data)
                 if not ret:
@@ -1242,7 +1308,7 @@ def generateFile(filePath):
             line=line+1
 
     if prevCmd:
-        print("%scmd %s not close,will auto close it!" % (colorama.Fore.YELLOW,prevCmd))
+        print("%scmd %s not close at line %d,will auto close it!" % (colorama.Fore.YELLOW,prevCmd,line))
         cmdFunc=closeCmds[prevCmd]
         ret=cmdFunc(fileName,args,data)
         if not ret:

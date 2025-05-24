@@ -1,6 +1,11 @@
 @start 1
 @bg 1
 @bg bg/test.jpg
+@floatText-start
+@floatText-text StoryTools是一个读取对话文本，生成到excel的工具。
+@floatText-color #fff
+@floatText-time 0.1
+@floatText-end
 @msg StoryTools是一个读取对话文本，生成到excel的工具。
 @msg 小明:StoryTools是一个读取对话文本，生成到excel的工具。
 @msg-start

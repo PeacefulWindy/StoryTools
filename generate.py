@@ -22,7 +22,7 @@ cmdPatterns={
     "bg":re.compile(r'^([\d]+)$'),
     "scene":re.compile(r'^([\d]+)$'),
     "msg":re.compile(r'^([\d]+)\:(.*)$'),
-    "msgName":re.compile(r'^([^:]*)(.*)$'),
+    "msgName":re.compile(r'^(.*)[:](.*)$'),
     "actor-id":re.compile(r'^([\d]+)$'),
     "actor-camp":re.compile(r'^([\d]+)$'),
     "actor-pos":re.compile(r'^([\d\.]+)\,([\d\.]+)[\,]?([\d\.]*)$'),

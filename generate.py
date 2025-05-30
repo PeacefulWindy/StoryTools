@@ -314,127 +314,101 @@ def fadeOutFunc(fileName,cmdArgs,cmdData):
     return True
 
 #角色命令
-def actorStartFunc(fileName,cmdArgs,cmdData):
-    data={
-        "id":0,
-        "camp":0,
-        "pos":
-        {
-            "x":0,
-            "y":0,
-            "z":0,
-        },
-        "rot":
-        {
-            "x":0,
-            "y":0,
-            "z":0,
-        },
-        "scale":
-        {
-            "x":1,
-            "y":1,
-            "z":1,
-        }
-    }
-    return data
-
-def actorIdFunc(fileName,cmdArgs,cmdData):
+def actorFunc(fileName,cmdArgs,cmdData):
     pattern=cmdPatterns["actor-id"]
     res=pattern.match(cmdArgs)
 
     if not res:
-        print("%sinvalid @actor-id args:%s" % (colorama.Fore.RED,cmdArgs))
-        return
-
-    datas=res.groups()
-    cmdData["id"]=int(datas[0])
-
-    return cmdData
-
-def actorCampFunc(fileName,cmdArgs,cmdData):
-    pattern=cmdPatterns["actor-camp"]
-    res=pattern.match(cmdArgs)
-
-    if not res:
-        print("%sinvalid @actor-camp args:%s" % (colorama.Fore.RED,cmdArgs))
-        return
-
-    datas=res.groups()
-    cmdData["camp"]=int(datas[0])
-
-    return cmdData
-
-def actorSrcFunc(fileName,cmdArgs,cmdData):
-    cmdData["src"]=cmdArgs
-    
-    return cmdData
-
-def actorPosFunc(fileName,cmdArgs,cmdData):
-    pattern=cmdPatterns["actor-pos"]
-    res=pattern.match(cmdArgs)
-
-    if not res:
-        print("%sinvalid @actor-pos args:%s" % (colorama.Fore.RED,cmdArgs))
+        print("%sinvalid @actor args:%s" % (colorama.Fore.RED,cmdArgs))
         return
     
     datas=res.groups()
-    cmdData["pos"]["x"]=float(datas[0])
-    cmdData["pos"]["y"]=float(datas[1])
-    if len(datas[2]) > 0:
-        cmdData["pos"]["z"]=float(datas[2])
-
-    return cmdData
-
-def actorRotateFunc(fileName,cmdArgs,cmdData):
-    pattern=cmdPatterns["actor-rot"]
-    res=pattern.match(cmdArgs)
-
-    if not res:
-        print("%sinvalid @actor-rot args:%s" % (colorama.Fore.RED,cmdArgs))
-        return
-    
-    datas=res.groups()
-    cmdData["rot"]["x"]=float(datas[0])
-    
-    if len(datas[1]) > 0:
-        cmdData["rot"]["y"]=float(datas[1])
-    if len(datas[2]) > 0:
-        cmdData["rot"]["z"]=float(datas[2])
-
-    return cmdData
-
-def actorScaleFunc(fileName,cmdArgs,cmdData):
-    pattern=cmdPatterns["actor-scale"]
-    res=pattern.match(cmdArgs)
-
-    if not res:
-        print("%sinvalid @actor-scale args:%s" % (colorama.Fore.RED,cmdArgs))
-        return
-    
-    datas=res.groups()
-    cmdData["scale"]["x"]=float(datas[0])
-    cmdData["scale"]["y"]=float(datas[1])
-    if len(datas[2]) > 0:
-        cmdData["scale"]["z"]=float(datas[2])
-
-    return cmdData
-
-def actorEndFunc(fileName,cmdArgs,cmdData):
-    if not cmdData:
-        print("%sinvalid @actor-end data:%s" % (colorama.Fore.RED,cmdData))
-        return
     
     targetData={
         "id":curId,
-        "nextId":curId+1,
         "cmd":"actor",
-        "args":cmdData
+        "nextId":curId+1,
+        "args":
+        {
+            "id":0
+        }
     }
+
+    datas=res.groups()
+    targetData["args"]["id"]=int(datas[0])
 
     addId()
     storyDatas.append(targetData)
-    return True
+
+    return cmdData
+
+# def actorCampFunc(fileName,cmdArgs,cmdData):
+#     pattern=cmdPatterns["actor-camp"]
+#     res=pattern.match(cmdArgs)
+
+#     if not res:
+#         print("%sinvalid @actor-camp args:%s" % (colorama.Fore.RED,cmdArgs))
+#         return
+
+#     datas=res.groups()
+#     cmdData["camp"]=int(datas[0])
+
+#     return cmdData
+
+# def actorSrcFunc(fileName,cmdArgs,cmdData):
+#     cmdData["src"]=cmdArgs
+    
+#     return cmdData
+
+# def actorPosFunc(fileName,cmdArgs,cmdData):
+#     pattern=cmdPatterns["actor-pos"]
+#     res=pattern.match(cmdArgs)
+
+#     if not res:
+#         print("%sinvalid @actor-pos args:%s" % (colorama.Fore.RED,cmdArgs))
+#         return
+    
+#     datas=res.groups()
+#     cmdData["pos"]["x"]=float(datas[0])
+#     cmdData["pos"]["y"]=float(datas[1])
+#     if len(datas[2]) > 0:
+#         cmdData["pos"]["z"]=float(datas[2])
+
+#     return cmdData
+
+# def actorRotateFunc(fileName,cmdArgs,cmdData):
+#     pattern=cmdPatterns["actor-rot"]
+#     res=pattern.match(cmdArgs)
+
+#     if not res:
+#         print("%sinvalid @actor-rot args:%s" % (colorama.Fore.RED,cmdArgs))
+#         return
+    
+#     datas=res.groups()
+#     cmdData["rot"]["x"]=float(datas[0])
+    
+#     if len(datas[1]) > 0:
+#         cmdData["rot"]["y"]=float(datas[1])
+#     if len(datas[2]) > 0:
+#         cmdData["rot"]["z"]=float(datas[2])
+
+#     return cmdData
+
+# def actorScaleFunc(fileName,cmdArgs,cmdData):
+#     pattern=cmdPatterns["actor-scale"]
+#     res=pattern.match(cmdArgs)
+
+#     if not res:
+#         print("%sinvalid @actor-scale args:%s" % (colorama.Fore.RED,cmdArgs))
+#         return
+    
+#     datas=res.groups()
+#     cmdData["scale"]["x"]=float(datas[0])
+#     cmdData["scale"]["y"]=float(datas[1])
+#     if len(datas[2]) > 0:
+#         cmdData["scale"]["z"]=float(datas[2])
+
+#     return cmdData
 
 #控制类
 #商店命令
@@ -1172,14 +1146,7 @@ cmds={
     "@msg-end":msgEndFunc,
 
     #actor命令
-    "@actor-id":actorIdFunc,
-    "@actor-src":actorSrcFunc,
-    "@actor-camp":actorCampFunc,
-    "@actor-start":actorStartFunc,
-    "@actor-pos":actorPosFunc,
-    "@actor-rot":actorRotateFunc,
-    "@actor-scale":actorScaleFunc,
-    "@actor-end":actorEndFunc,
+    "@actor":actorFunc,
 
     #anim命令
     "@anim":animFunc,
@@ -1269,7 +1236,6 @@ endCmds={
 closeCmds={
     "@floatText-start":floatTextEndFunc,
     "@msg-start":msgEndFunc,
-    "@actor-start":actorEndFunc,
     "@audio-start":audioEndFunc,
 }
 
@@ -1286,14 +1252,6 @@ cmdLinks={
         "@msg-sel",
         "@msg-async",
         "@msg-click",
-    ],
-    "@actor-start":[
-        "@actor-id",
-        "@actor-src",
-        "@actor-camp",
-        "@actor-pos",
-        "@actor-rot",
-        "@actor-scale",
     ],
     "@audio-start":[
         "@audio-id",

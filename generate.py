@@ -14,13 +14,16 @@ storyLabels=[]
 useIds=[]
 curId=0
 valueNames=[]
+scriptIds=[]
 
 cmdPatterns={
+    "color":re.compile(r'^([#][0-9A-Fa-f]{6}|[#][0-9A-Fa-f]{3})$'),
     "digit":re.compile(r'^([\d\.]+)$'),
     "bg":re.compile(r'^([\d]+)$'),
     "scene":re.compile(r'^([\d]+)$'),
+    "anim":re.compile(r'^([\d]+)$'),
     "msg":re.compile(r'^([\d]+)\:(.*)$'),
-    "msgName":re.compile(r'^([^:]*)(.*)$'),
+    "msgName":re.compile(r'^(.*)[:](.*)$'),
     "actor-id":re.compile(r'^([\d]+)$'),
     "actor-camp":re.compile(r'^([\d]+)$'),
     "actor-pos":re.compile(r'^([\d\.]+)\,([\d\.]+)[\,]?([\d\.]*)$'),
@@ -36,6 +39,7 @@ cmdPatterns={
     "bgm":re.compile(r'^([\d]+)$'),
     "se":re.compile(r'^([\d]+)$'),
     "vo":re.compile(r'^([\d]+)$'),
+    "fade":re.compile(r'^([\d\.]+)$'),
 }
 
 def addId():
@@ -69,6 +73,57 @@ def bgFunc(fileName,cmdArgs,cmdData):
     storyDatas.append(targetData)
     return True
 
+#浮动文本命令
+def floatTextStartFunc(fileName,cmdArgs,cmdData):
+    args={
+        "text":"",
+        "color":"",
+        "time":0,
+    }
+
+    return args
+
+def floatTextSetTextFunc(fileName,cmdArgs,cmdData):
+    cmdData["text"]=cmdArgs
+    return cmdData
+
+def floatTextColorFunc(fileName,cmdArgs,cmdData):
+    pattern=cmdPatterns["color"]
+    res=pattern.match(cmdArgs)
+
+    if not res:
+        print("%sinvalid @floatText-color args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+
+    datas=res.groups()
+    cmdData["color"]=datas[0]
+    return cmdData
+
+def floatTextTimeFunc(fileName,cmdArgs,cmdData):
+    try:
+        cmdData["time"]=float(cmdArgs)
+    except Exception as e:
+        print("%sinvalid @floatText-time args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+    
+    return cmdData
+
+def floatTextEndFunc(fileName,cmdArgs,cmdData):
+    if not cmdData:
+        print("%sinvalid @floatText-end data:%s" % (colorama.Fore.RED,cmdData))
+        return
+    
+    targetData={
+        "id":curId,
+        "nextId":curId+1,
+        "cmd":"floatText",
+        "args":cmdData
+    }
+
+    addId()
+    storyDatas.append(targetData)
+    return True
+
 #对话命令
 def msgFunc(fileName,cmdArgs,cmdData):
     targetData={
@@ -80,7 +135,7 @@ def msgFunc(fileName,cmdArgs,cmdData):
             "name":"",
             "text":"",
             "actor":0,
-            "sel":{},
+            "sel":[],
             "async":False,
             "click":True,
         }
@@ -176,6 +231,83 @@ def msgEndFunc(fileName,cmdArgs,cmdData):
 
     if not cmdData or not "sel" in cmdData:
         targetData["nextId"]=curId+1
+
+    addId()
+    storyDatas.append(targetData)
+    return True
+
+#过场动画
+def animFunc(fileName,cmdArgs,cmdData):
+    pattern=cmdPatterns["anim"]
+    res=pattern.match(cmdArgs)
+
+    if not res:
+        print("%sinvalid @anim args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+    
+    datas=res.groups()
+    id=float(datas[0])
+
+    targetData={
+        "id":curId,
+        "cmd":"anim",
+        "nextId":curId+1,
+        "args":
+        {
+            "id":id
+        }
+    }
+
+    addId()
+    storyDatas.append(targetData)
+    return True
+
+#淡入淡出
+def fadeInFunc(fileName,cmdArgs,cmdData):
+    pattern=cmdPatterns["fade"]
+    res=pattern.match(cmdArgs)
+
+    if not res:
+        print("%sinvalid @fadeIn args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+    
+    datas=res.groups()
+    time=float(datas[0])
+
+    targetData={
+        "id":curId,
+        "cmd":"fadeIn",
+        "nextId":curId+1,
+        "args":
+        {
+            "time":time
+        }
+    }
+
+    addId()
+    storyDatas.append(targetData)
+    return True
+
+def fadeOutFunc(fileName,cmdArgs,cmdData):
+    pattern=cmdPatterns["fade"]
+    res=pattern.match(cmdArgs)
+
+    if not res:
+        print("%sinvalid @fadeOut args:%s" % (colorama.Fore.RED,cmdArgs))
+        return
+    
+    datas=res.groups()
+    time=float(datas[0])
+
+    targetData={
+        "id":curId,
+        "cmd":"fadeOut",
+        "nextId":curId+1,
+        "args":
+        {
+            "time":time
+        }
+    }
 
     addId()
     storyDatas.append(targetData)
@@ -410,7 +542,7 @@ def sceneFunc(fileName,cmdArgs,cmdData):
 def scriptFunc(fileName,cmdArgs,cmdData):
     targetData={
         "id":curId,
-        "cmd":"scene",
+        "cmd":"script",
         "nextId":curId+1,
         "args":
         {
@@ -1021,6 +1153,13 @@ cmds={
     #bg命令
     "@bg":bgFunc,
 
+    #floatText命令
+    "@floatText-start":floatTextStartFunc,
+    "@floatText-text":floatTextSetTextFunc,
+    "@floatText-color":floatTextColorFunc,
+    "@floatText-time":floatTextTimeFunc,
+    "@floatText-end":floatTextEndFunc,
+
     #msg命令
     "@msg":msgFunc,
     "@msg-start":msgStartFunc,
@@ -1041,6 +1180,13 @@ cmds={
     "@actor-rot":actorRotateFunc,
     "@actor-scale":actorScaleFunc,
     "@actor-end":actorEndFunc,
+
+    #anim命令
+    "@anim":animFunc,
+
+    #fade命令
+    "@fadeIn":fadeInFunc,
+    "@fadeOut":fadeOutFunc,
 
     #控制类
     #shop命令
@@ -1113,25 +1259,32 @@ cmds={
     "@video":videoFunc,
 }
 
-endCmds={""
+endCmds={
+    "@floatText-end":True,
     "@msg-end":True,
     "@actor-end":True,
     "@audio-end":True,
 }
 
 closeCmds={
-   "@msg-start":msgEndFunc,
-   "@actor-start":actorEndFunc,
-   "@audio-start":audioEndFunc,
+    "@floatText-start":floatTextEndFunc,
+    "@msg-start":msgEndFunc,
+    "@actor-start":actorEndFunc,
+    "@audio-start":audioEndFunc,
 }
 
 cmdLinks={
+    "@floatText-start":[
+        "@floatText-text",
+        "@floatText-color",
+        "@floatText-time",
+    ],
     "@msg-start":[
         "@msg-text",
         "@msg-name",
         "@msg-actor",
         "@msg-sel",
-        "@msg-break",
+        "@msg-async",
         "@msg-click",
     ],
     "@actor-start":[
@@ -1202,6 +1355,11 @@ def generateFile(filePath):
                 
                 curId=id
                 headerCheck=True
+
+                scriptIds.append({
+                    "id":fileName,
+                    "nextId":curId,
+                })
                 continue
 
             if curId in useIds:
@@ -1217,7 +1375,7 @@ def generateFile(filePath):
             elif cmd in cmdLinks:
                 prevCmd=cmd
             elif prevCmd and not cmd in cmdLinks[prevCmd]:
-                print("%scmd %s not close,will auto close it!" % (colorama.Fore.YELLOW,prevCmd))
+                print("%scmd %s not close at line %d,will auto close it!" % (colorama.Fore.YELLOW,prevCmd,line))
                 cmdFunc=closeCmds[prevCmd]
                 ret=cmdFunc(fileName,args,data)
                 if not ret:
@@ -1236,7 +1394,7 @@ def generateFile(filePath):
             line=line+1
 
     if prevCmd:
-        print("%scmd %s not close,will auto close it!" % (colorama.Fore.YELLOW,prevCmd))
+        print("%scmd %s not close at line %d,will auto close it!" % (colorama.Fore.YELLOW,prevCmd,line))
         cmdFunc=closeCmds[prevCmd]
         ret=cmdFunc(fileName,args,data)
         if not ret:
@@ -1314,6 +1472,22 @@ def generateExcel(outputPath):
         sheet["A%d"%index].value=it["id"]
         sheet["B%d"%index].value=it["nextId"]
         index=index+1
+    
+    #生成脚本跳转id
+    sheet=wb.create_sheet("#StoryScript")
+    sheet["A1"].value="id"
+    sheet["A2"].value="string"
+    sheet["A3"].value="对话脚本id"
+
+    sheet["B1"].value="nextId"
+    sheet["B2"].value="int"
+    sheet["B3"].value="下一个对话id"
+
+    index=4
+    for it in scriptIds:
+        sheet["A%d"%index].value=it["id"]
+        sheet["B%d"%index].value=it["nextId"]
+        index=index+1
 
     wb.save(outputPath)
 
@@ -1329,6 +1503,9 @@ def main(configData):
 
     global valueNames
     valueNames=[]
+
+    global scriptIds
+    scriptIds=[]
 
     inputPath=os.path.abspath(configData["input"])
     outputPath=os.path.abspath(configData["output"])
